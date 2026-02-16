@@ -1,0 +1,26 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:best-practices",
+    ":enableHelpfulPreCommit",
+    "docker:pinDigests"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["python"],
+      "matchManagers": ["woodpecker"],
+      "groupName": "python updates",
+      "followTag": "3.14"
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "platformAutomerge": true,
+      "minimumReleaseAge": "3 days"
+    }
+  ],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on monday"]
+  }
+}
