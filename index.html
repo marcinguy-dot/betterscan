@@ -3,68 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Git-Analyzer | Deep Repository Insights</title>
+    <title>Checkmate Go | High-Performance Security Scanner</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
-        .hero-gradient { background: radial-gradient(circle at center, #1f6feb 0%, #0d1117 70%); }
-        .card { background-color: #161b22; border: 1px solid #30363d; border-radius: 6px; }
-        code { background-color: #21262d; padding: 0.2rem 0.4rem; border-radius: 4px; color: #79c0ff; }
+        .hero-gradient { background: radial-gradient(circle at top right, #1f6feb 0%, #0d1117 60%); }
+        .card { background-color: #161b22; border: 1px solid #30363d; border-radius: 8px; transition: 0.2s; }
+        .card:hover { border-color: #58a6ff; }
+        code { background-color: #21262d; padding: 0.2rem 0.4rem; border-radius: 4px; color: #79c0ff; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .terminal { background-color: #010409; border: 1px solid #30363d; border-radius: 6px; padding: 1.5rem; position: relative; }
+        .terminal::before { content: "•••"; position: absolute; top: 8px; left: 12px; color: #30363d; letter-spacing: 3px; }
     </style>
 </head>
 <body>
 
-    <nav class="p-6 flex justify-between items-center max-w-6xl mx-auto">
+    <nav class="max-w-6xl mx-auto p-6 flex justify-between items-center">
         <div class="text-xl font-bold text-white flex items-center gap-2">
-            <svg height="32" viewBox="0 0 16 16" width="32" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-            git-analyzer
+            <span class="text-blue-500">🛡️</span> Checkmate Go
         </div>
-        <a href="https://codeberg.org/marcinguy/git-analyzer" class="text-gray-400 hover:text-white transition">View on Codeberg</a>
+        <div class="flex gap-6">
+            <a href="https://codeberg.org/marcinguy/git-analyzer" class="text-gray-400 hover:text-white transition">Codeberg</a>
+        </div>
     </nav>
 
-    <header class="hero-gradient py-20 px-6 text-center">
-        <h1 class="text-5xl font-extrabold text-white mb-4">Analyze Your Git History</h1>
-        <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
-            A powerful, lightweight tool to extract meaningful metrics and patterns from your repositories.
-        </p>
-        <div class="flex justify-center gap-4">
-            <a href="#install" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-md font-semibold transition">Get Started</a>
-            <a href="https://codeberg.org/marcinguy/git-analyzer/src/branch/main/README.md" class="card px-6 py-3 text-white hover:bg-gray-800 transition">Read Docs</a>
+    <header class="hero-gradient pt-16 pb-24 px-6">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-5xl md:text-6xl font-extrabold text-white mb-6">Checkmate Go</h1>
+            <p class="text-xl text-gray-400 mb-10 leading-relaxed">
+                Go-based scanner runner with sequential/parallel execution, normalized findings, and optional <strong>LLM enrichment</strong> for JSON, SARIF, and HTML outputs.
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+                <a href="#usage" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-bold transition">Get Started</a>
+                <code class="flex items-center px-4 border border-gray-700 rounded-lg bg-black/50">go build -o checkmate-go .</code>
+            </div>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-6 py-20">
-        <div class="grid md:grid-cols-3 gap-8">
+    <main class="max-w-6xl mx-auto px-6 -mt-12">
+        <div class="grid md:grid-cols-3 gap-6 mb-20">
             <div class="card p-6">
-                <h3 class="text-white text-lg font-bold mb-2">⚡ High Performance</h3>
-                <p class="text-sm text-gray-400">Optimized to scan thousands of commits in seconds without heavy memory usage.</p>
+                <div class="text-2xl mb-4">🚀</div>
+                <h3 class="text-white font-bold mb-2">Parallel Execution</h3>
+                <p class="text-sm text-gray-400">Core-limited worker pool for concurrent scans. Supports OpenGrep, Trivy, Bandit, Brakeman, and more.</p>
             </div>
             <div class="card p-6">
-                <h3 class="text-white text-lg font-bold mb-2">📊 Actionable Metrics</h3>
-                <p class="text-sm text-gray-400">Identify hot spots, contributor trends, and code churn patterns easily.</p>
+                <div class="text-2xl mb-4">🤖</div>
+                <h3 class="text-white font-bold mb-2">LLM Enrichment</h3>
+                <p class="text-sm text-gray-400">Enhance security findings with AI context using OpenAI-compatible endpoints and swappable models.</p>
             </div>
             <div class="card p-6">
-                <h3 class="text-white text-lg font-bold mb-2">🛠️ CLI Native</h3>
-                <p class="text-sm text-gray-400">Designed to fit perfectly into your terminal-based workflow and CI/CD pipelines.</p>
+                <div class="text-2xl mb-4">📋</div>
+                <h3 class="text-white font-bold mb-2">Normalized Output</h3>
+                <p class="text-sm text-gray-400">Unified JSON/SARIF/HTML formats with smart deduplication and finding collapsing.</p>
             </div>
         </div>
 
-        <section id="install" class="mt-20">
-            <h2 class="text-3xl font-bold text-white mb-8 text-center">Installation</h2>
-            <div class="card p-8 max-w-2xl mx-auto">
-                <p class="mb-4">Clone and build the project directly from Codeberg:</p>
-                <div class="bg-black p-4 rounded-md overflow-x-auto border border-gray-700">
-                    <pre class="text-green-400"><code>git clone https://codeberg.org/marcinguy/git-analyzer.git
-cd git-analyzer
-# Follow build instructions in README</code></pre>
+        <section id="usage" class="space-y-12">
+            <div>
+                <h2 class="text-3xl font-bold text-white mb-6">Usage Examples</h2>
+                
+                <div class="space-y-6">
+                    <div class="terminal">
+                        <p class="text-gray-500 mb-2">// Run parallel scan with 8 jobs</p>
+                        <pre class="text-green-400"><code>./checkmate-go --code-dir ./src --strategy parallel --jobs 8</code></pre>
+                    </div>
+
+                    <div class="terminal">
+                        <p class="text-gray-500 mb-2">// Full report with LLM enrichment</p>
+                        <pre class="text-green-400"><code>./checkmate-go \
+  --code-dir ./project \
+  --llm-enrich \
+  --llm-model gpt-4o-mini \
+  --sarif-out results.sarif \
+  --html-out results.html</code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-12 pt-10">
+                <div>
+                    <h3 class="text-xl font-bold text-white mb-4">Strategies & Tools</h3>
+                    <ul class="space-y-3 text-gray-400">
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-500">✔</span> 
+                            <span><strong>Sequential:</strong> Predictable one-by-one execution.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-500">✔</span> 
+                            <span><strong>Parallel:</strong> High-speed concurrent worker pool.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-blue-500">✔</span> 
+                            <span><strong>Auto-Install:</strong> Install missing tools via <code>--install-missing</code>.</span>
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold text-white mb-4">Deployment Ready</h3>
+                    <p class="text-gray-400 mb-4">Includes ready-to-use templates for cloud-scale scanning:</p>
+                    <div class="flex gap-3">
+                        <span class="px-3 py-1 bg-gray-800 rounded text-xs text-blue-400 border border-gray-700">Cloud Run Jobs</span>
+                        <span class="px-3 py-1 bg-gray-800 rounded text-xs text-blue-400 border border-gray-700">ECS/Fargate</span>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
 
-    <footer class="border-t border-gray-800 mt-20 p-10 text-center text-gray-500">
-        <p>Released under the Open Source License. Hosted on Codeberg Pages.</p>
-        <p class="mt-2 text-sm">Maintained by <a href="https://codeberg.org/marcinguy" class="text-blue-500 hover:underline">marcinguy</a></p>
+    <footer class="mt-32 py-12 border-t border-gray-800 text-center">
+        <p class="text-gray-500">Part of the <a href="https://codeberg.org/marcinguy/git-analyzer" class="hover:text-blue-400 underline">Git-Analyzer</a> suite.</p>
+        <p class="text-xs text-gray-600 mt-2">Built for speed, security, and intelligence.</p>
     </footer>
 
 </body>
