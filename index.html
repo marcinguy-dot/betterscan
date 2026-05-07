@@ -1,13 +1,9 @@
-I have updated the full HTML to include the original Betterscan branding. I used the official favicon for the browser tab and the primary Betterscan logo for the navigation and hero sections. All links remain relative as requested.
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkmate Go | High-Performance Security Scanner</title>
-    <!-- Betterscan Original Favicon -->
-    <link rel="icon" href="https://betterscan.io/favicon.ico" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #ffffff; color: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
@@ -17,15 +13,13 @@ I have updated the full HTML to include the original Betterscan branding. I used
         .terminal { background-color: #161b22; color: #e6edf3; border-radius: 6px; padding: 1.25rem; overflow-x: auto; }
         code { font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace; font-size: 0.9em; }
         .tag { background-color: #ddf4ff; color: #0969da; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
-        .logo-img { height: 32px; width: auto; }
     </style>
 </head>
 <body>
 
     <nav class="max-w-6xl mx-auto p-6 flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <img src="https://betterscan.io/img/logo.png" alt="Betterscan Logo" class="logo-img">
-            <span class="text-lg font-bold tracking-tight">Checkmate Go</span>
+        <div class="text-lg font-bold flex items-center gap-2">
+            <span class="text-blue-600">🛡️</span> Checkmate Go
         </div>
         <div class="flex gap-6 text-sm font-medium">
             <a href="/" class="text-gray-600 hover:text-blue-600">Home</a>
@@ -35,7 +29,6 @@ I have updated the full HTML to include the original Betterscan branding. I used
 
     <header class="hero pt-16 pb-20 px-6">
         <div class="max-w-4xl mx-auto text-center">
-            <img src="https://betterscan.io/img/logo.png" alt="Betterscan" class="mx-auto mb-6 h-20 w-auto">
             <h1 class="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Betterscan</h1>
             <p class="text-lg text-gray-600 mb-10 leading-relaxed">
                 Betterscan rewrite in Go. Only as CLI with new features. Packaged now as a Go-based scanner runner with sequential/parallel execution, normalized findings, and optional <strong>LLM enrichment</strong> for JSON, SARIF, and HTML outputs.
@@ -126,5 +119,3 @@ I have updated the full HTML to include the original Betterscan branding. I used
 
 </body>
 </html>
-
-```
