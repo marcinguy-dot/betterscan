@@ -13,37 +13,24 @@
         .terminal { background-color: #161b22; color: #e6edf3; border-radius: 6px; padding: 1.25rem; overflow-x: auto; }
         code { font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace; font-size: 0.9em; }
         .tag { background-color: #ddf4ff; color: #0969da; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: inline-block; }
-        
-        /* Logo styling for the embedded SVG */
-        .logo-container {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: opacity 0.2s;
-        }
-        .logo-container:hover { opacity: 0.8; }
-        .logo-svg { height: 32px; width: auto; border-radius: 4px; }
     </style>
 </head>
 <body>
 
+    <!-- Navigation -->
     <nav class="max-w-6xl mx-auto p-6 flex justify-between items-center">
-        <a href="/" class="logo-container">
-            <!-- Inline SVG: Optimized Betterscan Logo Replacement -->
-            <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <rect width="100" height="100" rx="20" fill="#0969da"/>
-                <path d="M30 70 L50 30 L70 70" stroke="white" stroke-width="8" fill="none" stroke-linejoin="round"/>
-                <path d="M40 55 L60 55" stroke="white" stroke-width="8" fill="none"/>
-                <circle cx="75" cy="25" r="10" fill="#54aeff"/>
-            </svg>
-            <span class="text-lg font-bold tracking-tight text-[#1f2328]">Checkmate Go</span>
-        </a>
+        <div>
+            <a href="/" class="text-lg font-bold tracking-tight text-[#1f2328] hover:text-blue-600 transition-colors">
+                Betterscan
+            </a>
+        </div>
         <div class="flex gap-6 text-sm font-medium">
-            <a href="/" class="text-gray-600 hover:text-blue-600">Home</a>
-            <a href="https://codeberg.org/marcinguy/git-analyzer" target="_blank" class="text-gray-600 hover:text-blue-600">Codeberg</a>
+            <a href="/" class="text-gray-600 hover:text-blue-600 transition-colors">Home</a>
+            <a href="https://codeberg.org/marcinguy/git-analyzer" target="_blank" class="text-gray-600 hover:text-blue-600 transition-colors">Codeberg</a>
         </div>
     </nav>
 
+    <!-- Hero Section -->
     <header class="hero pt-16 pb-20 px-6">
         <div class="max-w-4xl mx-auto text-center">
             <h1 class="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Betterscan</h1>
@@ -57,6 +44,7 @@
         </div>
     </header>
 
+    <!-- Main Content -->
     <main class="max-w-6xl mx-auto px-6 py-16">
         <div class="grid md:grid-cols-3 gap-6 mb-20">
             <div class="card p-6">
@@ -96,9 +84,38 @@
                     </div>
                 </div>
             </div>
+
+            <div class="grid md:grid-cols-2 gap-12 pt-10 border-t border-gray-100">
+                <div>
+                    <h3 class="text-lg font-bold mb-4 text-gray-800">Strategies & Tools</h3>
+                    <ul class="space-y-3 text-sm text-gray-600">
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-600 font-bold">✓</span> 
+                            <span><strong>Sequential:</strong> Predictable one-by-one execution.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-600 font-bold">✓</span> 
+                            <span><strong>Parallel:</strong> High-speed concurrent worker pool.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-green-600 font-bold">✓</span> 
+                            <span><strong>Auto-Install:</strong> Install missing tools via <code>--install-missing</code>.</span>
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4 text-gray-800">Deployment Ready</h3>
+                    <p class="text-sm text-gray-600 mb-4 leading-relaxed">Ready-to-use templates for cloud-scale scanning:</p>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="/deploy/cloudrun-jobs" class="tag hover:bg-blue-100 transition">Cloud Run Jobs</a>
+                        <a href="/deploy/ecs-fargate/go-checkmate" class="tag hover:bg-blue-100 transition">ECS/Fargate</a>
+                    </div>
+                </div>
+            </div>
         </section>
     </main>
 
+    <!-- Footer -->
     <footer class="mt-20 py-12 border-t border-gray-100 text-center">
         <p class="text-sm text-gray-500">
             Part of the <a href="https://codeberg.org/marcinguy/git-analyzer" target="_blank" class="text-blue-600 hover:underline">Git-Analyzer</a> suite.
@@ -108,3 +125,4 @@
 
 </body>
 </html>
+
