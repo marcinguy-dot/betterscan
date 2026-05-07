@@ -1,120 +1,27 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkmate Go | High-Performance Security Scanner</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #ffffff; color: #1f2328; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
-        .hero { background-color: #f6f8fa; border-bottom: 1px solid #d0d7de; }
-        .card { background: #ffffff; border: 1px solid #d0d7de; border-radius: 6px; transition: 0.2s; }
-        .card:hover { border-color: #0969da; box-shadow: 0 8px 24px rgba(140,149,159,0.2); }
-        .terminal { background-color: #161b22; color: #e6edf3; border-radius: 6px; padding: 1.25rem; overflow-x: auto; }
-        code { font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace; font-size: 0.9em; }
-        .tag { background-color: #ddf4ff; color: #0969da; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
-    </style>
-</head>
-<body>
-
-    <nav class="max-w-6xl mx-auto p-6 flex justify-between items-center">
-        <div class="text-lg font-bold flex items-center gap-2">
-            <span class="text-blue-600">🛡️</span> Checkmate Go
+<div class="grid md:grid-cols-2 gap-12 pt-10 border-t border-gray-100">
+    <div>
+        <h3 class="text-lg font-bold mb-4 text-gray-800">Strategies & Tools</h3>
+        <ul class="space-y-3 text-sm text-gray-600">
+            <li class="flex items-start gap-2">
+                <span class="text-green-600 font-bold">✓</span> 
+                <span><strong>Sequential:</strong> Predictable one-by-one execution.</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="text-green-600 font-bold">✓</span> 
+                <span><strong>Parallel:</strong> High-speed concurrent worker pool.</span>
+            </li>
+            <li class="flex items-start gap-2">
+                <span class="text-green-600 font-bold">✓</span> 
+                <span><strong>Auto-Install:</strong> Install missing tools via <code>--install-missing</code>.</span>
+            </li>
+        </ul>
+    </div>
+    <div>
+        <h3 class="text-lg font-bold mb-4 text-gray-800">Deployment Ready</h3>
+        <p class="text-sm text-gray-600 mb-4 leading-relaxed">Ready-to-use templates for cloud-scale scanning:</p>
+        <div class="flex flex-wrap gap-3">
+            <a href="https://codeberg.org/marcinguy/checkmate-go/src/branch/main/deploy/cloudrun-jobs" target="_blank" class="tag hover:bg-blue-100 transition">Cloud Run Jobs</a>
+            <a href="https://codeberg.org/marcinguy/checkmate-go/src/branch/main/deploy/ecs-fargate/go-checkmate" target="_blank" class="tag hover:bg-blue-100 transition">ECS/Fargate</a>
         </div>
-        <div class="flex gap-6 text-sm font-medium">
-            <a href="https://codeberg.org/marcinguy/git-analyzer" target="_blank" class="text-gray-600 hover:text-blue-600">Codeberg</a>
-        </div>
-    </nav>
-
-    <header class="hero pt-16 pb-20 px-6">
-        <div class="max-w-4xl mx-auto text-center">
-            <h1 class="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Betterscan</h1>
-            <p class="text-lg text-gray-600 mb-10 leading-relaxed">
-                Betterscan rewrite in Go. Only as CLI with new features. Packaged now as a Go-based scanner runner with sequential/parallel execution, normalized findings, and optional <strong>LLM enrichment</strong> for JSON, SARIF, and HTML outputs.
-            </p>
-            <div class="flex flex-wrap justify-center gap-4">
-                <a href="#usage" class="bg-[#21262d] hover:bg-[#30363d] text-white px-6 py-2.5 rounded-md font-semibold text-sm transition">Get Started</a>
-                <code class="flex items-center px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-800">go build -o checkmate-go .</code>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-6xl mx-auto px-6 py-16">
-        <div class="grid md:grid-cols-3 gap-6 mb-20">
-            <div class="card p-6">
-                <div class="text-xl font-bold mb-2">🚀 Parallel Execution</div>
-                <p class="text-sm text-gray-600 leading-relaxed">Core-limited worker pool for concurrent scans. Supports OpenGrep, Trivy, Bandit, Brakeman, and more.</p>
-            </div>
-            <div class="card p-6">
-                <div class="text-xl font-bold mb-2">🤖 LLM Enrichment</div>
-                <p class="text-sm text-gray-600 leading-relaxed">Enhance security findings with AI context using OpenAI-compatible endpoints and swappable models.</p>
-            </div>
-            <div class="card p-6">
-                <div class="text-xl font-bold mb-2">📋 Normalized Output</div>
-                <p class="text-sm text-gray-600 leading-relaxed">Unified JSON/SARIF/HTML formats with smart deduplication and finding collapsing.</p>
-            </div>
-        </div>
-
-        <section id="usage" class="space-y-10">
-            <h2 class="text-2xl font-bold border-bottom pb-2">Usage Examples</h2>
-            
-            <div class="space-y-6">
-                <div>
-                    <p class="text-sm font-semibold text-gray-600 mb-2"># Run parallel scan with 8 jobs</p>
-                    <div class="terminal">
-                        <code>./checkmate-go --code-dir ./src --strategy parallel --jobs 8</code>
-                    </div>
-                </div>
-
-                <div>
-                    <p class="text-sm font-semibold text-gray-600 mb-2"># Full report with LLM enrichment</p>
-                    <div class="terminal">
-                        <code>./checkmate-go \
-  --code-dir ./project \
-  --llm-enrich \
-  --llm-model gpt-4o-mini \
-  --sarif-out results.sarif \
-  --html-out results.html</code>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-12 pt-10 border-t border-gray-100">
-                <div>
-                    <h3 class="text-lg font-bold mb-4 text-gray-800">Strategies & Tools</h3>
-                    <ul class="space-y-3 text-sm text-gray-600">
-                        <li class="flex items-start gap-2">
-                            <span class="text-green-600 font-bold">✓</span> 
-                            <span><strong>Sequential:</strong> Predictable one-by-one execution.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <span class="text-green-600 font-bold">✓</span> 
-                            <span><strong>Parallel:</strong> High-speed concurrent worker pool.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <span class="text-green-600 font-bold">✓</span> 
-                            <span><strong>Auto-Install:</strong> Install missing tools via <code>--install-missing</code>.</span>
-                        </li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="text-lg font-bold mb-4 text-gray-800">Deployment Ready</h3>
-                    <p class="text-sm text-gray-600 mb-4 leading-relaxed">Ready-to-use templates for cloud-scale scanning:</p>
-                    <div class="flex gap-2">
-                        <span class="tag">Cloud Run Jobs</span>
-                        <span class="tag">ECS/Fargate</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="mt-20 py-12 border-t border-gray-100 text-center">
-        <p class="text-sm text-gray-500">
-            Part of the <a href="https://codeberg.org/marcinguy/git-analyzer" target="_blank" class="text-blue-600 hover:underline">Git-Analyzer</a> suite.
-        </p>
-        <p class="text-xs text-gray-400 mt-2">Built for high-speed security scanning.</p>
-    </footer>
-
-</body>
-</html>
+    </div>
+</div>
