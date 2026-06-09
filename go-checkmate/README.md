@@ -4,7 +4,7 @@ Go-based scanner runner with sequential/parallel execution, normalized findings,
 and optional LLM enrichment for JSON/SARIF/HTML outputs.
  
 ## Features
-- Runs common Checkmate tools (OpenGrep, Trivy, Bandit, Brakeman, GoStaticcheck)
+- Runs common Checkmate tools (OpenGrep, Trivy, Bandit, Brakeman, GoStaticcheck, Fraunhofer CPG)
 - Two strategies:
   - `sequential`: run tools one-by-one with internal tool jobs
   - `parallel`: run tools concurrently with a core-limited worker pool
@@ -69,6 +69,12 @@ Generate all output formats with LLM enrichment:
 ./checkmate-go --tools opengrep,trivy,gostaticcheck --code-dir /path/to/project
 ```
 
+Run Fraunhofer CPG (requires Java 17+; auto-installs JDK and CPG runtime when `--install-missing` is enabled):
+
+```bash
+./checkmate-go --tools cpg --code-dir /path/to/project
+```
+
 Scan the Broken-Vulnerable-Code-Snippets dataset (cloned locally):
 
 ```bash
@@ -107,6 +113,14 @@ the longest message.
 - `--llm-max-issues`: max findings to enrich (default: `100`)
 - `--llm-timeout`: per-request timeout in seconds (default: `30`)
 
+## Fraunhofer CPG integration
+
+The `cpg` tool wraps [Fraunhofer CPG](https://github.com/Fraunhofer-AISEC/cpg) and runs its null-pointer and out-of-bounds checks against supported source files (Java, C/C++, Go, Python, Ruby, TypeScript/JavaScript, LLVM IR, INI).
+
+- Requires **Java 17+**. If Java is missing and `--install-missing` is enabled, checkmate-go downloads an Eclipse Temurin JDK for the current OS/architecture (`darwin`/`linux`/`windows`, `amd64`/`arm64`).
+- Downloads CPG `9.2.1` dependencies from Maven Central into `~/.checkmate/cpg/9.2.1/`.
+- If Java cannot be installed automatically (unsupported OS/arch) or dependency setup fails, the tool reports a clear error and skips the scan.
+
 ## Notes
-- Tools are executed if their binaries are available in `PATH`.
+- Tools are executed if their binaries are available in `PATH` (or auto-installed when supported).
 - Default strategy is `parallel`.

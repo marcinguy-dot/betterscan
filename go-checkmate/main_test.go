@@ -58,6 +58,23 @@ func TestDedupeIssues(t *testing.T) {
 	}
 }
 
+func TestParseCpg(t *testing.T) {
+	payload := []byte(`{"findings":[{"code":"CPG_NPE","file":"Main.java","line":12,"message":"Null pointer: example"}],"translation_units":1}`)
+	issues := parseCpg(payload, "cpg")
+	if len(issues) != 1 {
+		t.Fatalf("expected 1 issue, got %d", len(issues))
+	}
+	if issues[0].Code != "CPG_NPE" || issues[0].File != "Main.java" || issues[0].Line != 12 {
+		t.Fatalf("unexpected issue contents: %+v", issues[0])
+	}
+}
+
+func TestJavaVersionParsing(t *testing.T) {
+	if _, err := javaVersion("/definitely/not/java"); err == nil {
+		t.Fatalf("expected error for missing java binary")
+	}
+}
+
 func TestParseOpenGrep(t *testing.T) {
 	payload := []byte(`{"results":[{"check_id":"xss","path":"a.php","start":{"line":12},"extra":{"message":"hi"}}]}`)
 	issues := parseOpenGrep(payload, "opengrep")

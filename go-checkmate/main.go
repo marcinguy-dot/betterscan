@@ -49,6 +49,7 @@ const (
 	ToolBandit      ToolKind = "bandit"
 	ToolBrakeman    ToolKind = "brakeman"
 	ToolStaticcheck ToolKind = "staticcheck"
+	ToolCpg         ToolKind = "cpg"
 )
 
 type Tool struct {
@@ -262,6 +263,7 @@ func availableTools(selected map[string]struct{}) []Tool {
 		{Name: "bandit", Kind: ToolBandit},
 		{Name: "brakeman", Kind: ToolBrakeman},
 		{Name: "gostaticcheck", Kind: ToolStaticcheck},
+		{Name: "cpg", Kind: ToolCpg},
 	}
 
 	if len(selected) == 0 {
@@ -442,6 +444,18 @@ func buildCommand(tool Tool, context Context) (*exec.Cmd, string, error) {
 		return buildSimpleCommand("staticcheck", context, func(args *[]string) {
 			*args = append(*args, "-f", "json", "./...")
 		})
+	case ToolCpg:
+		if err := cpgInstallPreflight(); err != nil {
+			return nil, "", err
+		}
+		hasSources, err := hasSupportedCpgSources(context.CodeDir)
+		if err != nil {
+			return nil, "", err
+		}
+		if !hasSources {
+			return nil, "", errors.New("Fraunhofer CPG skipped: no supported source files detected")
+		}
+		return buildCpgCommand(context)
 	default:
 		return nil, "", errors.New("unsupported tool")
 	}
@@ -803,6 +817,12 @@ func parseToolOutput(tool Tool, stdout []byte, stderr []byte) []Issue {
 		return parseBrakeman(output, tool.Name)
 	case ToolStaticcheck:
 		return parseStaticcheck(output, tool.Name)
+	case ToolCpg:
+		payload := cpgJSONFromMixedOutput(stdout, stderr)
+		if len(payload) == 0 {
+			payload = output
+		}
+		return parseCpg(payload, tool.Name)
 	default:
 		return nil
 	}
@@ -1021,6 +1041,8 @@ func installTool(bin string) (string, error) {
 		return installBrakeman()
 	case "staticcheck":
 		return installStaticcheck()
+	case "cpg":
+		return installCpgTool()
 	default:
 		return "", fmt.Errorf("no installer for %s", bin)
 	}
