@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Betterscan - High-Performance Security Scanner</title>
+    <title>Betterscan - High-Performance Security Scanner with best accuracy</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         html { scroll-behavior: smooth; }
@@ -27,7 +27,7 @@
         </div>
         <div class="flex gap-6 text-sm font-medium">
             <a href="#" class="text-gray-600 hover:text-blue-600 transition-colors">Home</a>
-            <a href="https://codeberg.org/marcinguy/git-analyzer" target="_blank" class="text-gray-600 hover:text-blue-600 transition-colors">Codeberg</a>
+            <a href="https://codeberg.org/marcinguy/checkmate-go" target="_blank" class="text-gray-600 hover:text-blue-600 transition-colors">Codeberg</a>
         </div>
     </nav>
 
@@ -36,7 +36,7 @@
         <div class="max-w-4xl mx-auto text-center">
             <h1 class="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Betterscan</h1>
             <p class="text-lg text-gray-600 mb-10 leading-relaxed">
-                Betterscan rewrite in Go. Only as CLI with new features. Packaged now as a Go-based scanner runner with sequential/parallel execution, normalized findings, and optional <strong>LLM enrichment</strong> for JSON, SARIF, and HTML outputs.
+                Betterscan scanning orchestration tool rewrite in Go. Only as CLI with new features. Packaged now as a Go-based scanner runner with sequential/parallel execution, CPG support (CPG unifies three distinct paradigms into a single multi-graph database, AST (What the code looks like syntax-wise), CFG (The execution order and pathways), DFG (How data actually flows and morphs from sources to sinks. Because these are layered together, a single query can track a tainted variable across different files, scope changes, and conditional branches with surgical precision), normalized findings, and optional <strong>LLM enrichment</strong> for JSON, SARIF, and HTML outputs.
             </p>
             <div class="flex flex-wrap justify-center gap-4">
                 <a href="#usage" class="bg-[#21262d] hover:bg-[#30363d] text-white px-6 py-2.5 rounded-md font-semibold text-sm transition">Get Started</a>
@@ -50,7 +50,7 @@
         <div class="grid md:grid-cols-3 gap-6 mb-20">
             <div class="card p-6">
                 <div class="text-xl font-bold mb-2">🚀 Parallel Execution</div>
-                <p class="text-sm text-gray-600 leading-relaxed">Core-limited worker pool for concurrent scans. Supports OpenGrep, Trivy, Bandit, Brakeman, and more.</p>
+                <p class="text-sm text-gray-600 leading-relaxed">Core-limited worker pool for concurrent scans. Supports OpenGrep, Trivy, Bandit, Brakeman, Gostaticcheck, Fraunhoffer CPG.</p>
             </div>
             <div class="card p-6">
                 <div class="text-xl font-bold mb-2">🤖 LLM Enrichment</div>
@@ -108,8 +108,8 @@
                     <h3 class="text-lg font-bold mb-4 text-gray-800">Deployment Ready</h3>
                     <p class="text-sm text-gray-600 mb-4 leading-relaxed">Ready-to-use templates for cloud-scale scanning:</p>
                     <div class="flex flex-wrap gap-3">
-                        <a href="https://codeberg.org/marcinguy/git-analyzer" target="_blank" class="tag hover:bg-blue-100 transition">Cloud Run Jobs</a>
-                        <a href="https://codeberg.org/marcinguy/git-analyzer" target="_blank" class="tag hover:bg-blue-100 transition">ECS/Fargate</a>
+                        <a href="https://codeberg.org/marcinguy/checkmate-go" target="_blank" class="tag hover:bg-blue-100 transition">Cloud Run Jobs</a>
+                        <a href="https://codeberg.org/marcinguy/checkmate-go" target="_blank" class="tag hover:bg-blue-100 transition">ECS/Fargate</a>
                     </div>
                 </div>
             </div>
@@ -118,7 +118,7 @@
 
     <!-- Footer -->
     <footer class="mt-20 py-12 border-t border-gray-100 text-center">
-        <p class="text-xs text-gray-400 mt-2">Built for high-speed security scanning.</p>
+        <p class="text-xs text-gray-400 mt-2">Built for high-speed security and accurate scanning.</p>
     </footer>
 
 </body>
