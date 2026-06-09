@@ -16,6 +16,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -50,6 +51,7 @@ const (
 	ToolBrakeman    ToolKind = "brakeman"
 	ToolStaticcheck ToolKind = "staticcheck"
 	ToolCpg         ToolKind = "cpg"
+	ToolJoern       ToolKind = "joern"
 )
 
 type Tool struct {
@@ -264,6 +266,7 @@ func availableTools(selected map[string]struct{}) []Tool {
 		{Name: "brakeman", Kind: ToolBrakeman},
 		{Name: "gostaticcheck", Kind: ToolStaticcheck},
 		{Name: "cpg", Kind: ToolCpg},
+		{Name: "joern", Kind: ToolJoern},
 	}
 
 	if len(selected) == 0 {
@@ -456,6 +459,8 @@ func buildCommand(tool Tool, context Context) (*exec.Cmd, string, error) {
 			return nil, "", errors.New("Fraunhofer CPG skipped: no supported source files detected")
 		}
 		return buildCpgCommand(context)
+	case ToolJoern:
+		return buildJoernCommand(context)
 	default:
 		return nil, "", errors.New("unsupported tool")
 	}
@@ -823,6 +828,8 @@ func parseToolOutput(tool Tool, stdout []byte, stderr []byte) []Issue {
 			payload = output
 		}
 		return parseCpg(payload, tool.Name)
+	case ToolJoern:
+		return parseJoernScan(stdout, stderr, tool.Name)
 	default:
 		return nil
 	}
@@ -1043,6 +1050,8 @@ func installTool(bin string) (string, error) {
 		return installStaticcheck()
 	case "cpg":
 		return installCpgTool()
+	case "joern":
+		return installJoernScan(Context{InstallMissing: true})
 	default:
 		return "", fmt.Errorf("no installer for %s", bin)
 	}
@@ -1156,4 +1165,191 @@ func addPathDir(dir string) {
 		}
 	}
 	os.Setenv("PATH", current+string(os.PathListSeparator)+dir)
+}
+
+func buildJoernCommand(context Context) (*exec.Cmd, string, error) {
+	joernBin := os.Getenv("JOERN_SCAN_BIN")
+	if joernBin == "" {
+		home, _ := os.UserHomeDir()
+		customPath := filepath.Join(home, ".checkmate", "joern", "joern-cli", "joern-scan")
+		if _, err := os.Stat(customPath); err == nil {
+			joernBin = customPath
+		} else {
+			var err error
+			joernBin, err = exec.LookPath("joern-scan")
+			if err != nil {
+				if context.InstallMissing {
+					note, installErr := installJoernScan(context)
+					if installErr == nil {
+						if _, err := os.Stat(customPath); err == nil {
+							joernBin = customPath
+						} else {
+							joernBin, err = exec.LookPath("joern-scan")
+						}
+						if err == nil {
+							return buildJoernCommandWithBin(context, joernBin, note)
+						}
+					}
+					if installErr != nil {
+						err = installErr
+					}
+				}
+				return nil, "", fmt.Errorf("joern-scan binary not found: %w", err)
+			}
+		}
+	}
+	return buildJoernCommandWithBin(context, joernBin, "")
+}
+
+func buildJoernCommandWithBin(context Context, joernBin string, note string) (*exec.Cmd, string, error) {
+	// Let's ensure Java is available
+	java, err := ensureJava(context.InstallMissing)
+	if err != nil {
+		return nil, "", err
+	}
+
+	args := []string{joernBin, context.CodeDir}
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Dir = context.CodeDir
+
+	cmd.Env = os.Environ()
+	if java.JavaHome != "" {
+		cmd.Env = append(cmd.Env, "JAVA_HOME="+java.JavaHome)
+		javaBinDir := filepath.Dir(java.JavaBin)
+		for i, e := range cmd.Env {
+			if strings.HasPrefix(e, "PATH=") {
+				cmd.Env[i] = "PATH=" + javaBinDir + string(os.PathListSeparator) + e[5:]
+				break
+			}
+		}
+	}
+
+	notes := []string{}
+	if java.Note != "" {
+		notes = append(notes, java.Note)
+	}
+	if note != "" {
+		notes = append(notes, note)
+	}
+	return cmd, strings.Join(notes, "; "), nil
+}
+
+func installJoernScan(context Context) (string, error) {
+	// First ensure Java is available
+	java, err := ensureJava(context.InstallMissing)
+	if err != nil {
+		return "", fmt.Errorf("joern-scan requires Java: %w", err)
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	installDir := filepath.Join(home, ".checkmate", "joern")
+
+	// Create the directory
+	if err := os.MkdirAll(installDir, 0o755); err != nil {
+		return "", err
+	}
+
+	// Download joern-install.sh
+	tempDir, err := os.MkdirTemp("", "joern-install-*")
+	if err != nil {
+		return "", err
+	}
+	defer os.RemoveAll(tempDir)
+
+	scriptPath := filepath.Join(tempDir, "joern-install.sh")
+	if err := downloadFile("https://github.com/joernio/joern/releases/latest/download/joern-install.sh", scriptPath); err != nil {
+		return "", err
+	}
+
+	if err := os.Chmod(scriptPath, 0o755); err != nil {
+		return "", err
+	}
+
+	// Run the installer with --install-dir
+	cmd := exec.Command(scriptPath, "--install-dir="+installDir)
+
+	// Add our Java to PATH and JAVA_HOME for the installer process
+	cmd.Env = os.Environ()
+	if java.JavaHome != "" {
+		cmd.Env = append(cmd.Env, "JAVA_HOME="+java.JavaHome)
+		javaBinDir := filepath.Dir(java.JavaBin)
+		for i, e := range cmd.Env {
+			if strings.HasPrefix(e, "PATH=") {
+				cmd.Env[i] = "PATH=" + javaBinDir + string(os.PathListSeparator) + e[5:]
+				break
+			}
+		}
+	}
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(output))
+		if msg == "" {
+			msg = err.Error()
+		}
+		return "", fmt.Errorf("joern installer failed: %s", msg)
+	}
+
+	return "installed joern via joern-install.sh to " + installDir, nil
+}
+
+func parseJoernScan(stdout []byte, stderr []byte, analyzer string) []Issue {
+	lines := bytes.Split(stdout, []byte("\n"))
+	var issues []Issue
+	for _, lineBytes := range lines {
+		line := strings.TrimSpace(string(lineBytes))
+		if !strings.HasPrefix(line, "Result:") {
+			continue
+		}
+		issue := parseJoernLine(line, analyzer)
+		if issue != nil {
+			issues = append(issues, *issue)
+		}
+	}
+	return issues
+}
+
+func parseJoernLine(line string, analyzer string) *Issue {
+	line = strings.TrimPrefix(line, "Result:")
+	line = strings.TrimSpace(line)
+
+	// Format: $QUERY_SCORE : $QUERY_TITLE: $FILEPATH:$LINE_NUMBER:$FUNCTION_NAME
+	idx := strings.Index(line, " : ")
+	if idx == -1 {
+		return nil
+	}
+	score := strings.TrimSpace(line[:idx])
+	remaining := strings.TrimSpace(line[idx+3:])
+
+	lastColon := strings.LastIndex(remaining, ":")
+	if lastColon == -1 {
+		return nil
+	}
+	funcName := strings.TrimSpace(remaining[lastColon+1:])
+
+	rem1 := remaining[:lastColon]
+	secondLastColon := strings.LastIndex(rem1, ":")
+	if secondLastColon == -1 {
+		return nil
+	}
+	lineNumStr := strings.TrimSpace(rem1[secondLastColon+1:])
+	lineNum, err := strconv.Atoi(lineNumStr)
+	if err != nil {
+		return nil
+	}
+
+	rem2 := rem1[:secondLastColon]
+	thirdLastColon := strings.LastIndex(rem2, ":")
+	if thirdLastColon == -1 {
+		return nil
+	}
+	filePath := strings.TrimSpace(rem2[thirdLastColon+1:])
+	title := strings.TrimSpace(rem2[:thirdLastColon])
+
+	message := fmt.Sprintf("[%s] %s in function %s", score, title, funcName)
+	issue := newIssue(analyzer, title, filePath, lineNum, message)
+	return &issue
 }

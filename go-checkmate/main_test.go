@@ -85,3 +85,20 @@ func TestParseOpenGrep(t *testing.T) {
 		t.Fatalf("unexpected issue contents: %+v", issues[0])
 	}
 }
+
+func TestParseJoernScan(t *testing.T) {
+	stdout := []byte(`
+Result: 8.0 : Dangerous function gets() used: /home/user/code/simple.c:6:main
+Result: 6.5 : Some other vulnerability: /home/user/code/other.c:12:foo
+`)
+	issues := parseJoernScan(stdout, nil, "joern")
+	if len(issues) != 2 {
+		t.Fatalf("expected 2 issues, got %d", len(issues))
+	}
+	if issues[0].Code != "Dangerous function gets() used" || issues[0].File != "/home/user/code/simple.c" || issues[0].Line != 6 {
+		t.Fatalf("unexpected issue contents: %+v", issues[0])
+	}
+	if issues[1].Code != "Some other vulnerability" || issues[1].File != "/home/user/code/other.c" || issues[1].Line != 12 {
+		t.Fatalf("unexpected issue contents: %+v", issues[1])
+	}
+}
