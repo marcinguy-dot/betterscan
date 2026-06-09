@@ -36,8 +36,7 @@
         <div class="max-w-4xl mx-auto text-center">
             <h1 class="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Betterscan</h1>
             <p class="text-lg text-gray-600 mb-10 leading-relaxed">
-                Betterscan scanning orchestration tool rewrite in Go. Only as CLI with new features. Packaged now as a Go-based scanner runner with sequential/parallel execution, CPG support (CPG unifies three distinct paradigms into a single multi-graph database, AST (What the code looks like syntax-wise), CFG (The execution order and pathways), DFG (How data actually flows and morphs from sources to sinks. Because these are layered together, a single query can track a tainted variable across different files, scope changes, and conditional branches with surgical precision), normalized findings, and optional <strong>LLM enrichment</strong> for JSON, SARIF, and HTML outputs.
-            </p>
+                Rewrote the Betterscan scanning orchestration tool in Go. It is only available as a command-line interface (CLI) and has additional functionality. The tool is currently packaged as a Go-based scanner runner that can execute scans sequentially or in parallel; it supports CPG (a unified multi-graph database combining three distinct paradigms - AST (Syntax), CFG (Pathways and Execution Order), DFG (Data Flow)); it normalizes all findings; and it offers an optional LLM enrichment for JSON, SARIF, and HTML output formats.</p>
             <div class="flex flex-wrap justify-center gap-4">
                 <a href="#usage" class="bg-[#21262d] hover:bg-[#30363d] text-white px-6 py-2.5 rounded-md font-semibold text-sm transition">Get Started</a>
                 <code class="flex items-center px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-800">go build -o checkmate-go .</code>
