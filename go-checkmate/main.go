@@ -135,6 +135,18 @@ func main() {
 
 	flag.Parse()
 
+	cleanCodeDir := filepath.Clean(*codeDir)
+	info, err := os.Stat(cleanCodeDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: code-dir %q does not exist: %v\n", *codeDir, err)
+		os.Exit(1)
+	}
+	if !info.IsDir() {
+		fmt.Fprintf(os.Stderr, "Error: code-dir %q is not a directory\n", *codeDir)
+		os.Exit(1)
+	}
+	*codeDir = cleanCodeDir
+
 	jobCount := *jobs
 	if jobCount <= 0 {
 		jobCount = runtime.NumCPU()
@@ -468,29 +480,61 @@ func buildCommand(tool Tool, context Context) (*exec.Cmd, string, error) {
 
 func buildSimpleCommand(bin string, context Context, buildArgs func(args *[]string)) (*exec.Cmd, string, error) {
 	path, err := exec.LookPath(bin)
+	note := ""
 	if err != nil {
-		note := ""
-		if context.InstallMissing {
+		customPath := findPreinstalledBin(bin)
+		if customPath != "" {
+			path = customPath
+			err = nil
+		} else if context.InstallMissing {
 			var installErr error
 			note, installErr = installTool(bin)
 			if installErr == nil {
 				path, err = exec.LookPath(bin)
+			} else {
+				return nil, "", fmt.Errorf("failed to install %s: %w", bin, installErr)
 			}
 		}
-		if err != nil {
-			return nil, "", fmt.Errorf("binary not found: %s", bin)
-		}
-		args := []string{path}
-		buildArgs(&args)
-		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Dir = context.CodeDir
-		return cmd, note, nil
+	}
+	if err != nil {
+		return nil, "", fmt.Errorf("binary not found: %s", bin)
 	}
 	args := []string{path}
 	buildArgs(&args)
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Dir = context.CodeDir
-	return cmd, "", nil
+	return cmd, note, nil
+}
+
+func findPreinstalledBin(bin string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+
+	var candidates []string
+	switch bin {
+	case "staticcheck":
+		candidates = append(candidates, filepath.Join(home, "go", "bin", "staticcheck"))
+		if gopath := os.Getenv("GOPATH"); gopath != "" {
+			candidates = append(candidates, filepath.Join(gopath, "bin", "staticcheck"))
+		}
+	case "bandit":
+		candidates = append(candidates, filepath.Join(home, ".local", "bin", "bandit"))
+		candidates = append(candidates, filepath.Join(home, "Library", "Python", "3.9", "bin", "bandit"))
+	case "brakeman":
+		candidates = append(candidates, filepath.Join(home, ".gem", "ruby", "2.6.0", "bin", "brakeman"))
+	case "trivy":
+		candidates = append(candidates, filepath.Join(home, ".local", "bin", "trivy"))
+	}
+
+	for _, c := range candidates {
+		if _, err := os.Stat(c); err == nil {
+			addPathDir(filepath.Dir(c))
+			return c
+		}
+	}
+	return ""
 }
 
 func buildOpengrepCommand(context Context) (*exec.Cmd, string, error) {
@@ -661,6 +705,9 @@ func extractTarGz(archivePath, destDir string) error {
 		}
 
 		target := filepath.Join(destDir, header.Name)
+		if !strings.HasPrefix(filepath.Clean(target), filepath.Clean(destDir)+string(os.PathSeparator)) {
+			return fmt.Errorf("invalid tar entry: %s", header.Name)
+		}
 		switch header.Typeflag {
 		case tar.TypeDir:
 			if err := os.MkdirAll(target, 0o755); err != nil {
@@ -1058,10 +1105,22 @@ func installTool(bin string) (string, error) {
 }
 
 func installOpengrep() (string, error) {
-	if !hasCommand("sh") || !hasCommand("curl") {
-		return "", errors.New("OpenGrep install requires sh and curl")
+	tempDir, err := os.MkdirTemp("", "opengrep-install-*")
+	if err != nil {
+		return "", err
 	}
-	_, err := runInstallCommand("sh", "-c", "curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash")
+	defer os.RemoveAll(tempDir)
+
+	scriptPath := filepath.Join(tempDir, "install.sh")
+	if err := downloadFile("https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh", scriptPath); err != nil {
+		return "", err
+	}
+
+	if err := os.Chmod(scriptPath, 0o755); err != nil {
+		return "", err
+	}
+
+	_, err = runInstallCommand(scriptPath)
 	if err != nil {
 		return "", err
 	}
@@ -1076,16 +1135,36 @@ func installTrivy() (string, error) {
 		}
 		return "installed trivy via brew", nil
 	}
-	if hasCommand("sh") && hasCommand("curl") {
-		dest := filepath.Join(os.Getenv("HOME"), ".local", "bin")
+	if hasCommand("sh") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		dest := filepath.Join(home, ".local", "bin")
 		addPathDir(dest)
-		_, err := runInstallCommand("sh", "-c", fmt.Sprintf("curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b %s", dest))
+
+		tempDir, err := os.MkdirTemp("", "trivy-install-*")
+		if err != nil {
+			return "", err
+		}
+		defer os.RemoveAll(tempDir)
+
+		scriptPath := filepath.Join(tempDir, "install.sh")
+		if err := downloadFile("https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh", scriptPath); err != nil {
+			return "", err
+		}
+
+		if err := os.Chmod(scriptPath, 0o755); err != nil {
+			return "", err
+		}
+
+		_, err = runInstallCommand(scriptPath, "-b", dest)
 		if err != nil {
 			return "", err
 		}
 		return "installed trivy via install.sh", nil
 	}
-	return "", errors.New("Trivy install requires brew or sh+curl")
+	return "", errors.New("Trivy install requires brew or sh")
 }
 
 func installBandit() (string, error) {
@@ -1125,13 +1204,28 @@ func installBrakeman() (string, error) {
 }
 
 func installStaticcheck() (string, error) {
-	addPathDir(filepath.Join(os.Getenv("HOME"), "go", "bin"))
+	home, err := os.UserHomeDir()
+	if err == nil {
+		addPathDir(filepath.Join(home, "go", "bin"))
+	} else {
+		addPathDir(filepath.Join(os.Getenv("HOME"), "go", "bin"))
+	}
 	if !hasCommand("go") {
 		return "", errors.New("GoStaticcheck install requires go")
 	}
-	_, err := runInstallCommand("go", "install", "honnef.co/go/tools/cmd/staticcheck@latest")
+	_, err = runInstallCommand("go", "install", "honnef.co/go/tools/cmd/staticcheck@latest")
 	if err != nil {
-		return "", err
+		// Fallback to v0.5.1
+		_, err = runInstallCommand("go", "install", "honnef.co/go/tools/cmd/staticcheck@v0.5.1")
+		if err != nil {
+			// Fallback to v0.4.7
+			_, err = runInstallCommand("go", "install", "honnef.co/go/tools/cmd/staticcheck@v0.4.7")
+			if err != nil {
+				return "", err
+			}
+			return "installed staticcheck via go install (v0.4.7 fallback)", nil
+		}
+		return "installed staticcheck via go install (v0.5.1 fallback)", nil
 	}
 	return "installed staticcheck via go install", nil
 }
@@ -1203,7 +1297,7 @@ func buildJoernCommand(context Context) (*exec.Cmd, string, error) {
 
 func buildJoernCommandWithBin(context Context, joernBin string, note string) (*exec.Cmd, string, error) {
 	// Let's ensure Java is available
-	java, err := ensureJava(context.InstallMissing)
+	java, err := ensureJava(context.InstallMissing, false)
 	if err != nil {
 		return nil, "", err
 	}
@@ -1236,7 +1330,7 @@ func buildJoernCommandWithBin(context Context, joernBin string, note string) (*e
 
 func installJoernScan(context Context) (string, error) {
 	// First ensure Java is available
-	java, err := ensureJava(context.InstallMissing)
+	java, err := ensureJava(context.InstallMissing, false)
 	if err != nil {
 		return "", fmt.Errorf("joern-scan requires Java: %w", err)
 	}

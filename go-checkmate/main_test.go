@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"archive/tar"
+	"compress/gzip"
+	"os"
+	"testing"
+)
 
 func TestParseToolsEmpty(t *testing.T) {
 	selected := parseTools("")
@@ -100,5 +105,42 @@ Result: 6.5 : Some other vulnerability: /home/user/code/other.c:12:foo
 	}
 	if issues[1].Code != "Some other vulnerability" || issues[1].File != "/home/user/code/other.c" || issues[1].Line != 12 {
 		t.Fatalf("unexpected issue contents: %+v", issues[1])
+	}
+}
+
+func TestExtractTarGzPathTraversal(t *testing.T) {
+	tmpArchive, err := os.CreateTemp("", "test-traverse-*.tar.gz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpArchive.Name())
+	defer tmpArchive.Close()
+
+	gw := gzip.NewWriter(tmpArchive)
+	tw := tar.NewWriter(gw)
+
+	header := &tar.Header{
+		Name:     "../../outside-file.txt",
+		Typeflag: tar.TypeReg,
+		Size:     18,
+	}
+	if err := tw.WriteHeader(header); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tw.Write([]byte("malicious content")); err != nil {
+		t.Fatal(err)
+	}
+	tw.Close()
+	gw.Close()
+
+	destDir, err := os.MkdirTemp("", "test-dest-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(destDir)
+
+	err = extractTarGz(tmpArchive.Name(), destDir)
+	if err == nil {
+		t.Fatalf("expected error for path traversal entry, got nil")
 	}
 }

@@ -80,17 +80,23 @@ func bundledJavaHomeDir() (string, error) {
 	return filepath.Join(home, ".checkmate", "java", fmt.Sprintf("jdk-%d", minJavaVersion)), nil
 }
 
-func ensureJava(installMissing bool) (javaRuntime, error) {
+func ensureJava(installMissing bool, requireJDK bool) (javaRuntime, error) {
 	if javaHome := strings.TrimSpace(os.Getenv("JAVA_HOME")); javaHome != "" {
 		javaBin := filepath.Join(javaHome, "bin", javaBinaryName())
 		if version, err := javaVersion(javaBin); err == nil && version >= minJavaVersion {
-			return javaRuntime{JavaBin: javaBin, JavaHome: javaHome, Note: fmt.Sprintf("using JAVA_HOME (Java %d)", version)}, nil
+			runtime := javaRuntime{JavaBin: javaBin, JavaHome: javaHome, Note: fmt.Sprintf("using JAVA_HOME (Java %d)", version)}
+			if !requireJDK || hasJavac(runtime) {
+				return runtime, nil
+			}
 		}
 	}
 
 	if path, err := exec.LookPath("java"); err == nil {
 		if version, err := javaVersion(path); err == nil && version >= minJavaVersion {
-			return javaRuntime{JavaBin: path, Note: fmt.Sprintf("using java from PATH (Java %d)", version)}, nil
+			runtime := javaRuntime{JavaBin: path, Note: fmt.Sprintf("using java from PATH (Java %d)", version)}
+			if !requireJDK || hasJavac(runtime) {
+				return runtime, nil
+			}
 		}
 	}
 
@@ -108,6 +114,16 @@ func ensureJava(installMissing bool) (javaRuntime, error) {
 		return javaRuntime{}, fmt.Errorf("downloaded Java setup failed validation (need Java %d+)", minJavaVersion)
 	}
 	return javaRuntime{JavaBin: javaBin, JavaHome: javaHome, Note: note}, nil
+}
+
+func hasJavac(java javaRuntime) bool {
+	if java.JavaHome != "" {
+		javacBin := filepath.Join(java.JavaHome, "bin", javacBinaryName())
+		_, err := os.Stat(javacBin)
+		return err == nil
+	}
+	_, err := exec.LookPath(javacBinaryName())
+	return err == nil
 }
 
 func javaBinaryName() string {
@@ -267,6 +283,11 @@ func findJDKRoot(root string) (string, error) {
 		if _, err := os.Stat(javaBin); err == nil {
 			return candidate, nil
 		}
+		macHome := filepath.Join(candidate, "Contents", "Home")
+		macJavaBin := filepath.Join(macHome, "bin", javaBinaryName())
+		if _, err := os.Stat(macJavaBin); err == nil {
+			return macHome, nil
+		}
 	}
 	return "", errors.New("extracted JDK archive did not contain a bin/java executable")
 }
@@ -365,7 +386,7 @@ func cpgRunnerSourcePath() (string, error) {
 }
 
 func buildCpgCommand(context Context) (*exec.Cmd, string, error) {
-	java, err := ensureJava(context.InstallMissing)
+	java, err := ensureJava(context.InstallMissing, true)
 	if err != nil {
 		return nil, "", err
 	}
@@ -668,7 +689,7 @@ func hasSupportedCpgSources(codeDir string) (bool, error) {
 }
 
 func installCpgTool() (string, error) {
-	java, err := ensureJava(true)
+	java, err := ensureJava(true, true)
 	if err != nil {
 		return "", err
 	}
