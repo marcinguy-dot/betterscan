@@ -1,4 +1,4 @@
-package checkmate.cpg;
+package com.checkmate.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.fraunhofer.aisec.cpg.TranslationConfiguration;
@@ -39,17 +39,8 @@ public final class Runner {
         TranslationConfiguration config =
                 TranslationConfiguration.builder()
                         .sourceLocations(codeDir)
-                        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CLanguage")
-                        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.cxx.CPPLanguage")
-                        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.java.JavaLanguage")
-                        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.llvm.LLVMIRLanguage")
-                        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.python.PythonLanguage")
-                        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.golang.GoLanguage")
-                        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.typescript.TypeScriptLanguage")
-                        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ruby.RubyLanguage")
-                        .optionalLanguage("de.fraunhofer.aisec.cpg.frontends.ini.IniFileLanguage")
+                        .defaultLanguages()
                         .defaultPasses()
-                        .useParallelPasses(false)
                         .build();
 
         TranslationResult result =
@@ -61,7 +52,7 @@ public final class Runner {
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("findings", findings);
-        payload.put("translation_units", result.getComponents().size());
+        payload.put("components", result.getComponents().size());
 
         new ObjectMapper().writeValue(System.out, payload);
     }
@@ -90,7 +81,6 @@ public final class Runner {
         String clean = ANSI.matcher(output).replaceAll("");
         List<Map<String, Object>> findings = new ArrayList<>();
         String[] blocks = clean.split("--- FINDING: ");
-        int index = 1;
         for (String block : blocks) {
             if (block.trim().isEmpty()) {
                 continue;
@@ -121,7 +111,6 @@ public final class Runner {
             finding.put("line", line);
             finding.put("message", message);
             findings.add(finding);
-            index++;
         }
         return findings;
     }
