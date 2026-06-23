@@ -118,7 +118,7 @@ the longest message.
 The `cpg` tool wraps [Fraunhofer CPG](https://github.com/Fraunhofer-AISEC/cpg) and runs its null-pointer and out-of-bounds checks against supported source files (Java, C/C++, Go, Python, Ruby, TypeScript/JavaScript, LLVM IR, INI).
 
 - Requires **Java 17+**. If Java is missing and `--install-missing` is enabled, checkmate-go downloads an Eclipse Temurin JDK for the current OS/architecture (`darwin`/`linux`/`windows`, `amd64`/`arm64`).
-- Downloads CPG `9.2.1` dependencies from Maven Central into `~/.checkmate/cpg/9.2.1/`.
+- Downloads CPG `10.8.2` dependencies from Maven Central into `~/.checkmate/cpg/10.8.2/`.
 - If Java cannot be installed automatically (unsupported OS/arch) or dependency setup fails, the tool reports a clear error and skips the scan.
 
 ## Notes

@@ -16,17 +16,18 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const (
-	cpgVersion       = "9.2.1"
+	cpgVersion       = "10.8.2"
 	cpgGroupID       = "de.fraunhofer.aisec"
-	cpgArtifactID    = "cpg-console"
+	cpgArtifactID    = "cpg-core"
 	minJavaVersion   = 17
 	cpgRunnerPackage = "checkmate.cpg.Runner"
 )
 
-var cpgRunnerSource = filepath.Join("cpg", "Runner.java")
+var cpgRunnerSource = filepath.Join("cpg", "src", "main", "java", "com", "checkmate", "security", "Runner.java")
 
 type mavenPom struct {
 	Parent struct {
@@ -47,6 +48,45 @@ type mavenPom struct {
 		Dependencies []mavenDependency `xml:"dependencies>dependency"`
 	} `xml:"dependencyManagement"`
 	Dependencies []mavenDependency `xml:"dependencies>dependency"`
+	parentPom    *mavenPom
+}
+
+func (pom *mavenPom) getProperty(name string) string {
+	switch name {
+	case "project.version", "version", "pom.version":
+		return pom.Version
+	case "project.groupId", "groupId", "pom.groupId":
+		return pom.GroupID
+	case "project.artifactId", "artifactId", "pom.artifactId":
+		return pom.ArtifactID
+	}
+	for _, entry := range pom.Properties.Entries {
+		if entry.XMLName.Local == name {
+			return entry.Value
+		}
+	}
+	if pom.parentPom != nil {
+		return pom.parentPom.getProperty(name)
+	}
+	return ""
+}
+
+func (pom *mavenPom) resolveValue(val string) string {
+	for strings.Contains(val, "${") {
+		start := strings.Index(val, "${")
+		end := strings.Index(val[start:], "}")
+		if end == -1 {
+			break
+		}
+		end = start + end
+		propName := val[start+2 : end]
+		resolved := pom.getProperty(propName)
+		if resolved == "" {
+			break // avoid infinite loop if unresolved
+		}
+		val = val[:start] + resolved + val[end+1:]
+	}
+	return val
 }
 
 type mavenDependency struct {
@@ -59,9 +99,9 @@ type mavenDependency struct {
 }
 
 type javaRuntime struct {
-	JavaBin string
+	JavaBin  string
 	JavaHome string
-	Note    string
+	Note     string
 }
 
 func cpgHomeDir() (string, error) {
@@ -100,8 +140,51 @@ func ensureJava(installMissing bool, requireJDK bool) (javaRuntime, error) {
 		}
 	}
 
+	if bundledDir, err := bundledJavaHomeDir(); err == nil {
+		javaBin := filepath.Join(bundledDir, "bin", javaBinaryName())
+		if version, err := javaVersion(javaBin); err == nil && version >= minJavaVersion {
+			runtime := javaRuntime{JavaBin: javaBin, JavaHome: bundledDir, Note: fmt.Sprintf("using bundled JDK %d", version)}
+			if !requireJDK || hasJavac(runtime) {
+				return runtime, nil
+			}
+		}
+	}
+
 	if !installMissing {
 		return javaRuntime{}, errors.New("Java 17+ is required for Fraunhofer CPG but was not found; re-run with --install-missing or install a JDK manually")
+	}
+
+	installMutex.Lock()
+	defer installMutex.Unlock()
+
+	// Recheck after lock to prevent double-downloading
+	if javaHome := strings.TrimSpace(os.Getenv("JAVA_HOME")); javaHome != "" {
+		javaBin := filepath.Join(javaHome, "bin", javaBinaryName())
+		if version, err := javaVersion(javaBin); err == nil && version >= minJavaVersion {
+			runtime := javaRuntime{JavaBin: javaBin, JavaHome: javaHome, Note: fmt.Sprintf("using JAVA_HOME (Java %d)", version)}
+			if !requireJDK || hasJavac(runtime) {
+				return runtime, nil
+			}
+		}
+	}
+
+	if path, err := exec.LookPath("java"); err == nil {
+		if version, err := javaVersion(path); err == nil && version >= minJavaVersion {
+			runtime := javaRuntime{JavaBin: path, Note: fmt.Sprintf("using java from PATH (Java %d)", version)}
+			if !requireJDK || hasJavac(runtime) {
+				return runtime, nil
+			}
+		}
+	}
+
+	if bundledDir, err := bundledJavaHomeDir(); err == nil {
+		javaBin := filepath.Join(bundledDir, "bin", javaBinaryName())
+		if version, err := javaVersion(javaBin); err == nil && version >= minJavaVersion {
+			runtime := javaRuntime{JavaBin: javaBin, JavaHome: bundledDir, Note: fmt.Sprintf("using bundled JDK %d", version)}
+			if !requireJDK || hasJavac(runtime) {
+				return runtime, nil
+			}
+		}
 	}
 
 	javaHome, note, err := downloadJavaJDK()
@@ -169,7 +252,7 @@ func downloadJavaJDK() (string, string, error) {
 		"https://api.adoptium.net/v3/assets/latest/%d/hotspot?os=%s&architecture=%s&image_type=jdk&vendor=eclipse",
 		minJavaVersion, osName, arch,
 	)
-	resp, err := http.Get(url)
+	resp, err := httpGetWithRetry(url)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to query Adoptium for Java %d (%s/%s): %w", minJavaVersion, osName, arch, err)
 	}
@@ -310,6 +393,16 @@ func ensureCpgRuntime(context Context, java javaRuntime) (string, string, error)
 		return "", "", errors.New("Fraunhofer CPG runtime is not installed; re-run with --install-missing")
 	}
 
+	installMutex.Lock()
+	defer installMutex.Unlock()
+
+	// Recheck after lock
+	if _, err := os.Stat(runnerClass); err == nil {
+		if entries, err := os.ReadDir(libDir); err == nil && len(entries) > 0 {
+			return home, "", nil
+		}
+	}
+
 	note, err := installCpg(java)
 	if err != nil {
 		return "", "", err
@@ -331,8 +424,12 @@ func installCpg(java javaRuntime) (string, error) {
 		return "", err
 	}
 
-	if err := resolveMavenArtifact(cpgGroupID, cpgArtifactID, cpgVersion, libDir); err != nil {
-		return "", fmt.Errorf("failed to download Fraunhofer CPG dependencies: %w", err)
+	// Download required CPG modules: cpg-core, cpg-analysis, and cpg-language-java
+	modules := []string{"cpg-core", "cpg-analysis", "cpg-language-java"}
+	for _, module := range modules {
+		if err := resolveMavenArtifact(cpgGroupID, module, cpgVersion, libDir); err != nil {
+			return "", fmt.Errorf("failed to download Fraunhofer CPG module %s: %w", module, err)
+		}
 	}
 
 	javacBin := filepath.Join(java.JavaHome, "bin", javacBinaryName())
@@ -351,7 +448,21 @@ func installCpg(java javaRuntime) (string, error) {
 		return "", err
 	}
 
-	classpath := libDir + string(os.PathListSeparator) + "*"
+	// Build classpath with all JAR files in libDir
+	entries, err := os.ReadDir(libDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to read lib directory: %w", err)
+	}
+	var classpathEntries []string
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".jar") {
+			classpathEntries = append(classpathEntries, filepath.Join(libDir, entry.Name()))
+		}
+	}
+	if len(classpathEntries) == 0 {
+		return "", errors.New("no JAR files found in lib directory")
+	}
+	classpath := strings.Join(classpathEntries, string(os.PathListSeparator))
 	compileCmd := exec.Command(javacBin, "-cp", classpath, "-d", runnerDir, sourcePath)
 	compileOutput, err := compileCmd.CombinedOutput()
 	if err != nil {
@@ -398,7 +509,23 @@ func buildCpgCommand(context Context) (*exec.Cmd, string, error) {
 
 	libDir := filepath.Join(home, "lib")
 	runnerDir := filepath.Join(home, "runner")
-	classpath := strings.Join([]string{libDir + string(os.PathListSeparator) + "*", runnerDir}, string(os.PathListSeparator))
+
+	// Build classpath with all JAR files in libDir
+	entries, err := os.ReadDir(libDir)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to read lib directory: %w", err)
+	}
+	var classpathEntries []string
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".jar") {
+			classpathEntries = append(classpathEntries, filepath.Join(libDir, entry.Name()))
+		}
+	}
+	if len(classpathEntries) == 0 {
+		return nil, "", errors.New("no JAR files found in lib directory")
+	}
+	classpathEntries = append(classpathEntries, runnerDir)
+	classpath := strings.Join(classpathEntries, string(os.PathListSeparator))
 
 	codeDir, err := filepath.Abs(context.CodeDir)
 	if err != nil {
@@ -488,7 +615,9 @@ func resolveMavenArtifact(groupID, artifactID, version, destDir string) error {
 		managed := make(map[string]string)
 		for _, dep := range pom.DependencyManagement.Dependencies {
 			if dep.Version != "" {
-				managed[dep.GroupID+":"+dep.ArtifactID] = dep.Version
+				depGroupID := pom.resolveValue(dep.GroupID)
+				depArtifactID := pom.resolveValue(dep.ArtifactID)
+				managed[depGroupID+":"+depArtifactID] = pom.resolveValue(dep.Version)
 			}
 		}
 
@@ -496,19 +625,22 @@ func resolveMavenArtifact(groupID, artifactID, version, destDir string) error {
 			if dep.Optional || !mavenScopeIncluded(dep.Scope) {
 				continue
 			}
-			depVersion := dep.Version
-			if strings.HasPrefix(depVersion, "${") {
-				depVersion = ""
-			}
-			if depVersion == "" {
-				if managedVersion, ok := managed[dep.GroupID+":"+dep.ArtifactID]; ok {
+			depGroupID := pom.resolveValue(dep.GroupID)
+			depArtifactID := pom.resolveValue(dep.ArtifactID)
+			depVersion := pom.resolveValue(dep.Version)
+			if depVersion == "" || strings.Contains(depVersion, "${") {
+				keyResolved := depGroupID + ":" + depArtifactID
+				keyUnresolved := dep.GroupID + ":" + dep.ArtifactID
+				if managedVersion, ok := managed[keyResolved]; ok {
+					depVersion = managedVersion
+				} else if managedVersion, ok := managed[keyUnresolved]; ok {
 					depVersion = managedVersion
 				}
 			}
-			if depVersion == "" {
+			if depVersion == "" || strings.Contains(depVersion, "${") {
 				continue
 			}
-			if err := resolve(dep.GroupID, dep.ArtifactID, depVersion); err != nil {
+			if err := resolve(depGroupID, depArtifactID, depVersion); err != nil {
 				return err
 			}
 		}
@@ -529,7 +661,7 @@ func mavenScopeIncluded(scope string) bool {
 
 func fetchMavenPom(groupID, artifactID, version string) (*mavenPom, error) {
 	url := mavenArtifactURL(groupID, artifactID, version) + ".pom"
-	resp, err := http.Get(url)
+	resp, err := httpGetWithRetry(url)
 	if err != nil {
 		return nil, err
 	}
@@ -544,13 +676,18 @@ func fetchMavenPom(groupID, artifactID, version string) (*mavenPom, error) {
 	}
 
 	var pom mavenPom
-	if err := xml.Unmarshal(body, &pom); err != nil {
+	dec := xml.NewDecoder(bytes.NewReader(body))
+	dec.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		return input, nil
+	}
+	if err := dec.Decode(&pom); err != nil {
 		return nil, err
 	}
 
 	if pom.Parent.GroupID != "" && pom.Parent.ArtifactID != "" && pom.Parent.Version != "" {
 		parentPom, err := fetchMavenPom(pom.Parent.GroupID, pom.Parent.ArtifactID, pom.Parent.Version)
 		if err == nil {
+			pom.parentPom = parentPom
 			for _, dep := range parentPom.DependencyManagement.Dependencies {
 				pom.DependencyManagement.Dependencies = append(pom.DependencyManagement.Dependencies, dep)
 			}
@@ -585,7 +722,7 @@ func mavenArtifactURL(groupID, artifactID, version string) string {
 }
 
 func downloadFile(url, target string) error {
-	resp, err := http.Get(url)
+	resp, err := httpGetWithRetry(url)
 	if err != nil {
 		return err
 	}
@@ -693,6 +830,8 @@ func installCpgTool() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	installMutex.Lock()
+	defer installMutex.Unlock()
 	return installCpg(java)
 }
 
@@ -715,4 +854,41 @@ func cpgJSONFromMixedOutput(stdout, stderr []byte) []byte {
 		return nil
 	}
 	return raw
+}
+
+func httpGetWithRetry(url string) (*http.Response, error) {
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	var resp *http.Response
+	var err error
+	backoff := 500 * time.Millisecond
+
+	for i := 0; i < 5; i++ {
+		req, reqErr := http.NewRequest("GET", url, nil)
+		if reqErr != nil {
+			return nil, reqErr
+		}
+		req.Header.Set("User-Agent", "checkmate-go/1.0.0 (https://github.com/marcinguy/checkmate-go)")
+
+		resp, err = client.Do(req)
+		if err == nil {
+			if resp.StatusCode == http.StatusTooManyRequests || (resp.StatusCode >= 500 && resp.StatusCode < 600) {
+				resp.Body.Close()
+				time.Sleep(backoff)
+				backoff *= 2
+				continue
+			}
+			return resp, nil
+		}
+
+		time.Sleep(backoff)
+		backoff *= 2
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }

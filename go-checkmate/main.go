@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,6 +25,8 @@ const (
 	aikidoRulesURL  = "https://github.com/AikidoSec/opengrep-rules/archive/refs/heads/main.tar.gz"
 	amplifyRulesURL = "https://github.com/amplify-security/opengrep-rules/archive/refs/heads/main.tar.gz"
 )
+
+var installMutex sync.Mutex
 
 type Strategy string
 
@@ -626,7 +627,7 @@ func refreshRules(rulesDir string) error {
 }
 
 func downloadRules(name, url, rulesDir string) error {
-	resp, err := http.Get(url)
+	resp, err := httpGetWithRetry(url)
 	if err != nil {
 		return fmt.Errorf("download %s rules: %w", name, err)
 	}
@@ -1105,6 +1106,20 @@ func installTool(bin string) (string, error) {
 }
 
 func installOpengrep() (string, error) {
+	installMutex.Lock()
+	defer installMutex.Unlock()
+
+	if _, err := exec.LookPath("opengrep"); err == nil {
+		return "opengrep already installed", nil
+	}
+	home, _ := os.UserHomeDir()
+	if home != "" {
+		defaultPath := filepath.Join(home, ".opengrep/cli/latest/opengrep")
+		if _, err := os.Stat(defaultPath); err == nil {
+			return "opengrep already installed", nil
+		}
+	}
+
 	tempDir, err := os.MkdirTemp("", "opengrep-install-*")
 	if err != nil {
 		return "", err
@@ -1128,6 +1143,20 @@ func installOpengrep() (string, error) {
 }
 
 func installTrivy() (string, error) {
+	installMutex.Lock()
+	defer installMutex.Unlock()
+
+	if _, err := exec.LookPath("trivy"); err == nil {
+		return "trivy already installed", nil
+	}
+	home, _ := os.UserHomeDir()
+	if home != "" {
+		dest := filepath.Join(home, ".local", "bin", "trivy")
+		if _, err := os.Stat(dest); err == nil {
+			return "trivy already installed", nil
+		}
+	}
+
 	if runtime.GOOS == "darwin" && hasCommand("brew") {
 		_, err := runInstallCommand("brew", "install", "trivy")
 		if err != nil {
@@ -1168,6 +1197,25 @@ func installTrivy() (string, error) {
 }
 
 func installBandit() (string, error) {
+	installMutex.Lock()
+	defer installMutex.Unlock()
+
+	if _, err := exec.LookPath("bandit"); err == nil {
+		return "bandit already installed", nil
+	}
+	home, _ := os.UserHomeDir()
+	if home != "" {
+		candidates := []string{
+			filepath.Join(home, ".local", "bin", "bandit"),
+			filepath.Join(home, "Library", "Python", "3.9", "bin", "bandit"),
+		}
+		for _, c := range candidates {
+			if _, err := os.Stat(c); err == nil {
+				return "bandit already installed", nil
+			}
+		}
+	}
+
 	addPathDir(filepath.Join(os.Getenv("HOME"), ".local", "bin"))
 	addPathDir(filepath.Join(os.Getenv("HOME"), "Library", "Python", "3.9", "bin"))
 	if hasCommand("python3") {
@@ -1188,6 +1236,20 @@ func installBandit() (string, error) {
 }
 
 func installBrakeman() (string, error) {
+	installMutex.Lock()
+	defer installMutex.Unlock()
+
+	if _, err := exec.LookPath("brakeman"); err == nil {
+		return "brakeman already installed", nil
+	}
+	home, _ := os.UserHomeDir()
+	if home != "" {
+		dest := filepath.Join(home, ".gem", "ruby", "2.6.0", "bin", "brakeman")
+		if _, err := os.Stat(dest); err == nil {
+			return "brakeman already installed", nil
+		}
+	}
+
 	addPathDir(filepath.Join(os.Getenv("HOME"), ".gem", "ruby", "2.6.0", "bin"))
 	if !hasCommand("gem") {
 		return "", errors.New("Brakeman install requires gem")
@@ -1204,7 +1266,20 @@ func installBrakeman() (string, error) {
 }
 
 func installStaticcheck() (string, error) {
+	installMutex.Lock()
+	defer installMutex.Unlock()
+
+	if _, err := exec.LookPath("staticcheck"); err == nil {
+		return "staticcheck already installed", nil
+	}
 	home, err := os.UserHomeDir()
+	if err == nil {
+		dest := filepath.Join(home, "go", "bin", "staticcheck")
+		if _, err := os.Stat(dest); err == nil {
+			return "staticcheck already installed", nil
+		}
+	}
+
 	if err == nil {
 		addPathDir(filepath.Join(home, "go", "bin"))
 	} else {
@@ -1329,17 +1404,27 @@ func buildJoernCommandWithBin(context Context, joernBin string, note string) (*e
 }
 
 func installJoernScan(context Context) (string, error) {
-	// First ensure Java is available
+	// First ensure Java is available without lock to prevent deadlock
 	java, err := ensureJava(context.InstallMissing, false)
 	if err != nil {
 		return "", fmt.Errorf("joern-scan requires Java: %w", err)
 	}
+
+	installMutex.Lock()
+	defer installMutex.Unlock()
 
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
 	installDir := filepath.Join(home, ".checkmate", "joern")
+	customPath := filepath.Join(installDir, "joern-cli", "joern-scan")
+	if _, err := os.Stat(customPath); err == nil {
+		return "joern-scan already installed to " + installDir, nil
+	}
+	if _, err := exec.LookPath("joern-scan"); err == nil {
+		return "joern-scan already installed", nil
+	}
 
 	// Create the directory
 	if err := os.MkdirAll(installDir, 0o755); err != nil {

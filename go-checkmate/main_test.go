@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -142,5 +143,42 @@ func TestExtractTarGzPathTraversal(t *testing.T) {
 	err = extractTarGz(tmpArchive.Name(), destDir)
 	if err == nil {
 		t.Fatalf("expected error for path traversal entry, got nil")
+	}
+}
+
+func TestDedupeIssuesFileLine(t *testing.T) {
+	issues := []Issue{
+		newIssue("opengrep", "XSS", "a.php", 10, "message from opengrep"),
+		newIssue("bandit", "B001", "a.py", 5, "message from bandit"),
+		newIssue("trivy", "CVE-2021", "a.php", 10, "message from trivy"),
+	}
+	deduped, raw := dedupeIssues(issues, DedupeFileLine)
+	if raw != 3 {
+		t.Fatalf("expected raw count 3, got %d", raw)
+	}
+	// Should collapse to 2 issues (a.php:10 and a.py:5)
+	if len(deduped) != 2 {
+		t.Fatalf("expected 2 deduped issues, got %d", len(deduped))
+	}
+	// Verify the retained message is the longest one
+	for _, issue := range deduped {
+		if issue.File == "a.php" && issue.Line == 10 {
+			if !strings.Contains(issue.Message, "opengrep") {
+				t.Errorf("expected longest message retained for a.php:10, got: %s", issue.Message)
+			}
+		}
+	}
+}
+
+func TestIssueFingerprint(t *testing.T) {
+	issue1 := newIssue("opengrep", "XSS", "a.php", 10, "test message")
+	issue2 := newIssue("opengrep", "XSS", "a.php", 10, "test message")
+	issue3 := newIssue("opengrep", "XSS", "a.php", 10, "different message")
+
+	if issue1.Fingerprint != issue2.Fingerprint {
+		t.Errorf("identical issues should have same fingerprint")
+	}
+	if issue1.Fingerprint == issue3.Fingerprint {
+		t.Errorf("issues with different messages should have different fingerprints")
 	}
 }
