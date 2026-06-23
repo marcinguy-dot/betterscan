@@ -10,7 +10,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	
-	"checkmate-web/backend/models"
+	"checkmate-web/models"
 )
 
 func main() {
