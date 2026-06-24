@@ -9,8 +9,8 @@ RUN go mod download
 # 2. Copy EVERYTHING else (including the models and worker folders)
 COPY . .
 
-# 3. Build pointing to the SPECIFIC directory of the worker, NOT the root
-RUN CGO_ENABLED=0 GOOS=linux go build -o backend ./backend
+# 3. Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
 # Runtime stage
 FROM alpine:latest

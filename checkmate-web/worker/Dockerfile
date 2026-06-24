@@ -1,16 +1,15 @@
-# Build stage
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22 AS builder
 
 WORKDIR /app
 
-# Install git and other dependencies needed for scanning
-RUN apk add --no-cache git gcc musl-dev
+# 1. Copy the module files first
+COPY go.mod go.sum ./
+RUN go mod download
 
-
-# Copy source code
+# 2. Copy EVERYTHING else (including the models and worker folders)
 COPY . .
 
-# Build the application
+# 3. Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o worker .
 
 # Runtime stage

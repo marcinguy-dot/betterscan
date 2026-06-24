@@ -10,12 +10,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"checkmate-web/backend/models"
+	"checkmate-web/worker/models"
 )
 
 type ScanJob struct {
@@ -139,8 +140,13 @@ func processScanJob(ctx context.Context, db *gorm.DB, rdb *redis.Client, job *Sc
 	}
 
 	// Save findings
+	scanUUID, err := uuid.Parse(job.ScanID)
+	if err != nil {
+		return fmt.Errorf("invalid scan ID: %w", err)
+	}
+
 	for i := range summary.FinalIssues {
-		summary.FinalIssues[i].ScanID = job.ScanID
+		summary.FinalIssues[i].ScanID = scanUUID
 		summary.FinalIssues[i].Severity = inferSeverity(summary.FinalIssues[i].Message)
 	}
 
