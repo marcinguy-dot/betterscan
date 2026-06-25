@@ -48,10 +48,6 @@ export default function Dashboard() {
   const [trends, setTrends] = useState<TrendData[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
   const fetchData = async () => {
     try {
       const [statsRes, scansRes, trendsRes] = await Promise.all([
@@ -75,6 +71,13 @@ export default function Dashboard() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchData()
+    }
+    loadData()
+  }, [])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -100,9 +103,12 @@ export default function Dashboard() {
     if (!acc[trend.date]) {
       acc[trend.date] = { date: trend.date, critical: 0, high: 0, medium: 0, low: 0 }
     }
-    acc[trend.date][trend.severity as keyof typeof acc[typeof trend.date]] = trend.count
+    const severityKey = trend.severity as 'critical' | 'high' | 'medium' | 'low'
+    if (severityKey in acc[trend.date]) {
+      acc[trend.date][severityKey] = trend.count
+    }
     return acc
-  }, {} as Record<string, any>)
+  }, {} as Record<string, { date: string; critical: number; high: number; medium: number; low: number }>)
 
   const chartData = Object.values(severityTrends).slice(-30) // Last 30 days
 

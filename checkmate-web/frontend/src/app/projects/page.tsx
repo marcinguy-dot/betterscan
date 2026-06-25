@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -21,7 +21,7 @@ interface Project {
 }
 
 export default function ProjectsPage() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [showDialog, setShowDialog] = useState(false)
@@ -32,12 +32,6 @@ export default function ProjectsPage() {
     repo_branch: "main",
     language: "",
   })
-
-  useEffect(() => {
-    if (status === "authenticated") {
-      fetchProjects()
-    }
-  }, [status])
 
   const fetchProjects = async () => {
     try {
@@ -50,6 +44,15 @@ export default function ProjectsPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      if (status === "authenticated") {
+        await fetchProjects()
+      }
+    }
+    loadProjects()
+  }, [status])
 
   const handleCreateProject = async () => {
     try {
