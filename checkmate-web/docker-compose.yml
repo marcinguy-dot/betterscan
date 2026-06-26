@@ -96,6 +96,18 @@ services:
       - /app/node_modules
       - /app/.next
 
+  # Zero-build static jQuery + Bootstrap frontend (alternative to `frontend`).
+  # Served by nginx on http://localhost:8081 for look & feel comparison.
+  frontend-jquery:
+    build:
+      context: ./frontend-jquery
+      dockerfile: Dockerfile
+    container_name: checkmate-frontend-jquery
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
   redis_data:
