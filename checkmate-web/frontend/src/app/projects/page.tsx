@@ -32,6 +32,33 @@ export default function ProjectsPage() {
     repo_branch: "main",
     language: "",
   })
+  const [formError, setFormError] = useState("")
+
+  // Mirror the backend's allowlist so obviously invalid input is caught early.
+  // The backend remains the authoritative validation boundary.
+  const validateNewProject = (): string | null => {
+    const name = newProject.name.trim()
+    if (!name) return "Project name is required"
+    if (name.length > 200) return "Project name is too long"
+
+    const repoUrl = newProject.repo_url.trim()
+    if (!repoUrl) return "Repository URL is required"
+    const scpLike = /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+:.+$/.test(repoUrl)
+    if (!scpLike) {
+      try {
+        const parsed = new URL(repoUrl)
+        const allowed = ["http:", "https:", "ssh:", "git:"]
+        if (!allowed.includes(parsed.protocol)) return "Repository URL must use http(s), ssh or git"
+      } catch {
+        return "Repository URL is not a valid URL"
+      }
+    }
+
+    const branch = newProject.repo_branch.trim()
+    if (branch && !/^[A-Za-z0-9._/-]+$/.test(branch)) return "Branch name contains invalid characters"
+
+    return null
+  }
 
   const fetchProjects = async () => {
     try {
@@ -55,6 +82,12 @@ export default function ProjectsPage() {
   }, [status])
 
   const handleCreateProject = async () => {
+    const validationError = validateNewProject()
+    if (validationError) {
+      setFormError(validationError)
+      return
+    }
+    setFormError("")
     try {
       const res = await fetch("http://localhost:8080/api/v1/projects", {
         method: "POST",
@@ -65,9 +98,13 @@ export default function ProjectsPage() {
         setShowDialog(false)
         setNewProject({ name: "", description: "", repo_url: "", repo_branch: "main", language: "" })
         fetchProjects()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setFormError(data.error || "Failed to create project")
       }
     } catch (error) {
       console.error("Failed to create project:", error)
+      setFormError("Failed to create project")
     }
   }
 
@@ -138,6 +175,9 @@ export default function ProjectsPage() {
                     placeholder="go, python, java, etc."
                   />
                 </div>
+                {formError && (
+                  <p className="text-sm text-red-600" role="alert">{formError}</p>
+                )}
                 <Button onClick={handleCreateProject} className="w-full">
                   Create Project
                 </Button>

@@ -91,6 +91,12 @@ func initDB() (*gorm.DB, error) {
 }
 
 func processScanJob(ctx context.Context, db *gorm.DB, rdb *redis.Client, job *ScanJob) error {
+	// Validate and normalize all job inputs before acting on them. This is the
+	// component that runs git/the scanner, so it must not trust the queue.
+	if err := validateJob(job); err != nil {
+		return updateScanFailed(db, job.ScanID, fmt.Sprintf("Invalid scan job: %v", err))
+	}
+
 	// Update scan status to running
 	now := time.Now()
 	if err := db.Model(&models.Scan{}).
@@ -201,9 +207,28 @@ func processScanJob(ctx context.Context, db *gorm.DB, rdb *redis.Client, job *Sc
 }
 
 func cloneRepo(repoURL, branch string) (string, error) {
+	// Defense-in-depth: re-validate even though the job was validated upstream.
+	validURL, err := validateRepoURL(repoURL)
+	if err != nil {
+		return "", err
+	}
+	validBranch, err := validateBranch(branch)
+	if err != nil {
+		return "", err
+	}
+
 	repoDir := filepath.Join(os.TempDir(), fmt.Sprintf("repo-%d", time.Now().UnixNano()))
 
-	cmd := exec.Command("git", "clone", "--depth", "1", "--branch", branch, repoURL, repoDir)
+	// "--" stops the URL from being parsed as an option, and --single-branch
+	// limits the clone to the requested branch.
+	cmd := exec.Command("git", "clone", "--depth", "1", "--single-branch",
+		"--branch", validBranch, "--", validURL, repoDir)
+	// Disable interactive prompts and restrict git to safe transports so a
+	// crafted remote cannot trigger local/ext command execution.
+	cmd.Env = append(os.Environ(),
+		"GIT_TERMINAL_PROMPT=0",
+		"GIT_ALLOW_PROTOCOL=http:https:ssh:git",
+	)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("git clone failed: %v\nOutput: %s", err, string(output))
 	}
