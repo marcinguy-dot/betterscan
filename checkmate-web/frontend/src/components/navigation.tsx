@@ -70,7 +70,7 @@ export function Navigation() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => signOut()}>Log out</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>Log out</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (

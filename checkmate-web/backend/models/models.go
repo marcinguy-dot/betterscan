@@ -13,7 +13,8 @@ type User struct {
 	Email        string    `gorm:"uniqueIndex;not null" json:"email"`
 	Name         string    `json:"name"`
 	AvatarURL    string    `json:"avatar_url"`
-	Provider     string    `gorm:"not null" json:"provider"` // google, github, auth0, etc.
+	PasswordHash string    `gorm:"column:password_hash" json:"-"` // bcrypt hash for local auth
+	Provider     string    `gorm:"not null" json:"provider"`      // local, google, github, etc.
 	ProviderID   string    `gorm:"not null" json:"provider_id"`
 	Role         string    `gorm:"default:user" json:"role"` // admin, user
 	LastLoginAt  time.Time `json:"last_login_at"`

@@ -52,24 +52,31 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	// Local authentication (email + password, JWT bearer tokens).
+	auth := newAuthService(db)
+
 	// API routes
 	api := router.Group("/api/v1")
 	{
-		// Health check
+		// Health check (public)
 		api.GET("/health", func(c *gin.Context) {
 			c.JSON(200, gin.H{"status": "ok"})
 		})
 
-		// Auth routes
-		auth := api.Group("/auth")
-		{
-			auth.GET("/login", handleLogin)
-			auth.GET("/callback", handleCallback)
-			auth.GET("/logout", handleLogout)
-		}
+		// Public auth routes
+		api.POST("/auth/register", auth.register)
+		api.POST("/auth/login", auth.login)
+	}
 
-		// Project routes (protected)
-		projects := api.Group("/projects")
+	// Everything below requires a valid bearer token.
+	protected := api.Group("")
+	protected.Use(auth.middleware())
+	{
+		protected.GET("/auth/me", auth.me)
+		protected.POST("/auth/logout", auth.logout)
+
+		// Project routes
+		projects := protected.Group("/projects")
 		{
 			projects.GET("", listProjects(db))
 			projects.POST("", createProject(db))
@@ -79,7 +86,7 @@ func main() {
 		}
 
 		// Scan routes
-		scans := api.Group("/scans")
+		scans := protected.Group("/scans")
 		{
 			scans.GET("", listScans(db))
 			scans.POST("", createScan(db))
@@ -88,14 +95,14 @@ func main() {
 		}
 
 		// Finding routes
-		findings := api.Group("/findings")
+		findings := protected.Group("/findings")
 		{
 			findings.GET("", listFindings(db))
 			findings.PUT("/:id/false-positive", markFalsePositive(db))
 		}
 
 		// Schedule routes
-		schedules := api.Group("/schedules")
+		schedules := protected.Group("/schedules")
 		{
 			schedules.GET("", listSchedules(db))
 			schedules.POST("", createSchedule(db))
@@ -104,7 +111,7 @@ func main() {
 		}
 
 		// Dashboard routes
-		dashboard := api.Group("/dashboard")
+		dashboard := protected.Group("/dashboard")
 		{
 			dashboard.GET("/stats", getDashboardStats(db))
 			dashboard.GET("/trends", getVulnerabilityTrends(db))
@@ -134,22 +141,6 @@ func initDB() (*gorm.DB, error) {
 	}
 	
 	return db, nil
-}
-
-// Auth handlers (placeholder - implement OAuth2 flow)
-func handleLogin(c *gin.Context) {
-	provider := c.Query("provider")
-	// Redirect to OAuth provider
-	c.JSON(200, gin.H{"message": "OAuth login initiated", "provider": provider})
-}
-
-func handleCallback(c *gin.Context) {
-	// Handle OAuth callback
-	c.JSON(200, gin.H{"message": "OAuth callback handled"})
-}
-
-func handleLogout(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Logged out"})
 }
 
 // Project handlers
@@ -207,12 +198,18 @@ func createProject(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
+		user, ok := currentUser(c)
+		if !ok {
+			c.JSON(401, gin.H{"error": "authorization required"})
+			return
+		}
 		project := models.Project{
 			Name:        name,
 			Description: desc,
 			RepoURL:     repoURL,
 			RepoBranch:  branch,
 			Language:    lang,
+			CreatedBy:   user.ID,
 		}
 		if err := db.Create(&project).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})

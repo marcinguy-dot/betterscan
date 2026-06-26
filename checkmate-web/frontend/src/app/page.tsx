@@ -1,6 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { authedFetch } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -43,6 +46,8 @@ interface TrendData {
 }
 
 export default function Dashboard() {
+  const router = useRouter()
+  const { status } = useSession()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [scans, setScans] = useState<Scan[]>([])
   const [trends, setTrends] = useState<TrendData[]>([])
@@ -51,9 +56,9 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       const [statsRes, scansRes, trendsRes] = await Promise.all([
-        fetch("http://localhost:8080/api/v1/dashboard/stats"),
-        fetch("http://localhost:8080/api/v1/scans?limit=10"),
-        fetch("http://localhost:8080/api/v1/dashboard/trends"),
+        authedFetch("/api/v1/dashboard/stats"),
+        authedFetch("/api/v1/scans?limit=10"),
+        authedFetch("/api/v1/dashboard/trends"),
       ])
 
       const [statsData, scansData, trendsData] = await Promise.all([
@@ -73,11 +78,19 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login")
+      return
+    }
+    if (status !== "authenticated") {
+      return
+    }
     const loadData = async () => {
       await fetchData()
     }
     loadData()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status])
 
   const getStatusColor = (status: string) => {
     switch (status) {

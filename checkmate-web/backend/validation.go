@@ -22,6 +22,9 @@ const (
 	maxBranchLen      = 255
 	maxReasonLen      = 2000
 	maxCronExprLen    = 256
+	maxEmailLen       = 254
+	minPasswordLen    = 8
+	maxPasswordLen    = 128
 )
 
 // allowedTools mirrors the tool names accepted by go-checkmate's -tools flag.
@@ -65,7 +68,36 @@ var (
 	branchRe   = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 	languageRe = regexp.MustCompile(`^[A-Za-z0-9 +#._-]+$`)
 	scpLikeRe  = regexp.MustCompile(`^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+:.+$`)
+	emailRe    = regexp.MustCompile(`^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$`)
 )
+
+// validateEmail normalizes and validates a login email address.
+func validateEmail(raw string) (string, error) {
+	email := strings.ToLower(strings.TrimSpace(raw))
+	if email == "" {
+		return "", errors.New("email is required")
+	}
+	if len(email) > maxEmailLen {
+		return "", fmt.Errorf("email must be at most %d characters", maxEmailLen)
+	}
+	if !emailRe.MatchString(email) {
+		return "", errors.New("email is not valid")
+	}
+	return email, nil
+}
+
+// validatePassword enforces a minimum strength without rejecting any byte the
+// user might legitimately use in a passphrase. It is not trimmed: leading and
+// trailing whitespace are significant in passwords.
+func validatePassword(raw string) (string, error) {
+	if len(raw) < minPasswordLen {
+		return "", fmt.Errorf("password must be at least %d characters", minPasswordLen)
+	}
+	if len(raw) > maxPasswordLen {
+		return "", fmt.Errorf("password must be at most %d characters", maxPasswordLen)
+	}
+	return raw, nil
+}
 
 // hasControlChars reports whether s contains C0/C1 control characters. Tab and
 // newline are allowed for multi-line fields when allowNewlines is true.

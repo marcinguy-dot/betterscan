@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
+import { authedFetch } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -62,7 +63,7 @@ export default function ProjectsPage() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/v1/projects")
+      const res = await authedFetch("/api/v1/projects")
       const data = await res.json()
       setProjects(data)
     } catch (error) {
@@ -76,6 +77,8 @@ export default function ProjectsPage() {
     const loadProjects = async () => {
       if (status === "authenticated") {
         await fetchProjects()
+      } else if (status === "unauthenticated") {
+        setLoading(false)
       }
     }
     loadProjects()
@@ -89,9 +92,8 @@ export default function ProjectsPage() {
     }
     setFormError("")
     try {
-      const res = await fetch("http://localhost:8080/api/v1/projects", {
+      const res = await authedFetch("/api/v1/projects", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newProject),
       })
       if (res.ok) {

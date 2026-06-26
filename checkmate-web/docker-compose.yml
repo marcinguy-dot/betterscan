@@ -40,11 +40,9 @@ services:
       DATABASE_URL: host=postgres user=postgres password=postgres dbname=checkmate port=5432 sslmode=disable
       REDIS_ADDR: redis:6379
       PORT: 8080
-      JWT_SECRET: your-secret-key-here
-      GOOGLE_CLIENT_ID: your-google-client-id
-      GOOGLE_CLIENT_SECRET: your-google-client-secret
-      GITHUB_CLIENT_ID: your-github-client-id
-      GITHUB_CLIENT_SECRET: your-github-client-secret
+      # Signs the JWT bearer tokens issued by the backend. Replace with a strong
+      # random value in production (e.g. `openssl rand -hex 32`).
+      JWT_SECRET: ${JWT_SECRET:-dev-change-me-to-a-strong-random-secret}
     ports:
       - "8080:8080"
     depends_on:
@@ -81,11 +79,14 @@ services:
       dockerfile: Dockerfile
     container_name: checkmate-frontend
     environment:
+      # Browser-facing backend URL.
       NEXT_PUBLIC_API_URL: http://localhost:8080
+      # Server-side backend URL used by next-auth's credentials authorize() from
+      # inside the container (localhost would resolve to the frontend itself).
+      INTERNAL_API_URL: http://backend:8080
       NEXTAUTH_URL: http://localhost:3000
-      NEXTAUTH_SECRET: your-nextauth-secret
-      GOOGLE_CLIENT_ID: your-google-client-id
-      GITHUB_CLIENT_ID: your-github-client-id
+      # Encrypts the next-auth session cookie. Replace in production.
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-change-me-to-a-strong-random-secret}
     ports:
       - "3000:3000"
     depends_on:
