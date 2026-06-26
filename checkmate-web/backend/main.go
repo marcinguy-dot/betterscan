@@ -1,15 +1,17 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	
+
 	"checkmate-web/backend/models"
 )
 
@@ -50,24 +52,31 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	// Local authentication (email + password, JWT bearer tokens).
+	auth := newAuthService(db)
+
 	// API routes
 	api := router.Group("/api/v1")
 	{
-		// Health check
+		// Health check (public)
 		api.GET("/health", func(c *gin.Context) {
 			c.JSON(200, gin.H{"status": "ok"})
 		})
 
-		// Auth routes
-		auth := api.Group("/auth")
-		{
-			auth.GET("/login", handleLogin)
-			auth.GET("/callback", handleCallback)
-			auth.GET("/logout", handleLogout)
-		}
+		// Public auth routes
+		api.POST("/auth/register", auth.register)
+		api.POST("/auth/login", auth.login)
+	}
 
-		// Project routes (protected)
-		projects := api.Group("/projects")
+	// Everything below requires a valid bearer token.
+	protected := api.Group("")
+	protected.Use(auth.middleware())
+	{
+		protected.GET("/auth/me", auth.me)
+		protected.POST("/auth/logout", auth.logout)
+
+		// Project routes
+		projects := protected.Group("/projects")
 		{
 			projects.GET("", listProjects(db))
 			projects.POST("", createProject(db))
@@ -77,7 +86,7 @@ func main() {
 		}
 
 		// Scan routes
-		scans := api.Group("/scans")
+		scans := protected.Group("/scans")
 		{
 			scans.GET("", listScans(db))
 			scans.POST("", createScan(db))
@@ -86,14 +95,14 @@ func main() {
 		}
 
 		// Finding routes
-		findings := api.Group("/findings")
+		findings := protected.Group("/findings")
 		{
 			findings.GET("", listFindings(db))
 			findings.PUT("/:id/false-positive", markFalsePositive(db))
 		}
 
 		// Schedule routes
-		schedules := api.Group("/schedules")
+		schedules := protected.Group("/schedules")
 		{
 			schedules.GET("", listSchedules(db))
 			schedules.POST("", createSchedule(db))
@@ -102,7 +111,7 @@ func main() {
 		}
 
 		// Dashboard routes
-		dashboard := api.Group("/dashboard")
+		dashboard := protected.Group("/dashboard")
 		{
 			dashboard.GET("/stats", getDashboardStats(db))
 			dashboard.GET("/trends", getVulnerabilityTrends(db))
@@ -134,22 +143,6 @@ func initDB() (*gorm.DB, error) {
 	return db, nil
 }
 
-// Auth handlers (placeholder - implement OAuth2 flow)
-func handleLogin(c *gin.Context) {
-	provider := c.Query("provider")
-	// Redirect to OAuth provider
-	c.JSON(200, gin.H{"message": "OAuth login initiated", "provider": provider})
-}
-
-func handleCallback(c *gin.Context) {
-	// Handle OAuth callback
-	c.JSON(200, gin.H{"message": "OAuth callback handled"})
-}
-
-func handleLogout(c *gin.Context) {
-	c.JSON(200, gin.H{"message": "Logged out"})
-}
-
 // Project handlers
 func listProjects(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -162,12 +155,61 @@ func listProjects(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+type projectRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	RepoURL     string `json:"repo_url"`
+	RepoBranch  string `json:"repo_branch"`
+	Language    string `json:"language"`
+}
+
+// validate normalizes and validates the request, returning sanitized values.
+func (r projectRequest) validate() (name, desc, repoURL, branch, lang string, err error) {
+	if name, err = validateName(r.Name); err != nil {
+		return
+	}
+	if desc, err = validateDescription(r.Description); err != nil {
+		return
+	}
+	if repoURL, err = validateRepoURL(r.RepoURL); err != nil {
+		return
+	}
+	if branch, err = validateBranch(r.RepoBranch); err != nil {
+		return
+	}
+	if branch == "" {
+		branch = "main"
+	}
+	if lang, err = validateLanguage(r.Language); err != nil {
+		return
+	}
+	return
+}
+
 func createProject(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var project models.Project
-		if err := c.ShouldBindJSON(&project); err != nil {
+		var req projectRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": "invalid request body"})
+			return
+		}
+		name, desc, repoURL, branch, lang, err := req.validate()
+		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
+		}
+		user, ok := currentUser(c)
+		if !ok {
+			c.JSON(401, gin.H{"error": "authorization required"})
+			return
+		}
+		project := models.Project{
+			Name:        name,
+			Description: desc,
+			RepoURL:     repoURL,
+			RepoBranch:  branch,
+			Language:    lang,
+			CreatedBy:   user.ID,
 		}
 		if err := db.Create(&project).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -179,7 +221,11 @@ func createProject(db *gorm.DB) gin.HandlerFunc {
 
 func getProject(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
+		id, err := validateUUID(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		var project models.Project
 		if err := db.Where("id = ?", id).First(&project).Error; err != nil {
 			c.JSON(404, gin.H{"error": "Project not found"})
@@ -191,17 +237,34 @@ func getProject(db *gorm.DB) gin.HandlerFunc {
 
 func updateProject(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
+		id, err := validateUUID(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		var project models.Project
 		if err := db.Where("id = ?", id).First(&project).Error; err != nil {
 			c.JSON(404, gin.H{"error": "Project not found"})
 			return
 		}
-		if err := c.ShouldBindJSON(&project); err != nil {
+		var req projectRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": "invalid request body"})
+			return
+		}
+		name, desc, repoURL, branch, lang, err := req.validate()
+		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
-		if err := db.Save(&project).Error; err != nil {
+		// Update only client-controllable fields; never id/created_by/timestamps.
+		if err := db.Model(&project).Updates(map[string]interface{}{
+			"name":        name,
+			"description": desc,
+			"repo_url":    repoURL,
+			"repo_branch": branch,
+			"language":    lang,
+		}).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
@@ -211,7 +274,11 @@ func updateProject(db *gorm.DB) gin.HandlerFunc {
 
 func deleteProject(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
+		id, err := validateUUID(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		if err := db.Delete(&models.Project{}, "id = ?", id).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -223,12 +290,16 @@ func deleteProject(db *gorm.DB) gin.HandlerFunc {
 // Scan handlers
 func listScans(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		projectID := c.Query("project_id")
-		var scans []models.Scan
 		query := db
-		if projectID != "" {
+		if raw := c.Query("project_id"); raw != "" {
+			projectID, err := validateUUID(raw)
+			if err != nil {
+				c.JSON(400, gin.H{"error": "invalid project_id"})
+				return
+			}
 			query = query.Where("project_id = ?", projectID)
 		}
+		var scans []models.Scan
 		if err := query.Order("created_at DESC").Find(&scans).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -237,14 +308,46 @@ func listScans(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+type scanRequest struct {
+	ProjectID string `json:"project_id"`
+	Strategy  string `json:"strategy"`
+	Tools     string `json:"tools"`
+}
+
 func createScan(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var scan models.Scan
-		if err := c.ShouldBindJSON(&scan); err != nil {
+		var req scanRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": "invalid request body"})
+			return
+		}
+		projectID, err := validateUUID(req.ProjectID)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "invalid project_id"})
+			return
+		}
+		strategy, err := validateStrategy(req.Strategy)
+		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
-		scan.Status = "pending"
+		tools, err := normalizeTools(req.Tools)
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		// Ensure the referenced project exists before queueing work for it.
+		var project models.Project
+		if err := db.Where("id = ?", projectID).First(&project).Error; err != nil {
+			c.JSON(404, gin.H{"error": "Project not found"})
+			return
+		}
+		scan := models.Scan{
+			ProjectID: projectID,
+			Status:    "pending",
+			Strategy:  strategy,
+			Tools:     tools,
+		}
 		if err := db.Create(&scan).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -256,7 +359,11 @@ func createScan(db *gorm.DB) gin.HandlerFunc {
 
 func getScan(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
+		id, err := validateUUID(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		var scan models.Scan
 		if err := db.Preload("Findings").Where("id = ?", id).First(&scan).Error; err != nil {
 			c.JSON(404, gin.H{"error": "Scan not found"})
@@ -268,7 +375,11 @@ func getScan(db *gorm.DB) gin.HandlerFunc {
 
 func getScanFindings(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
+		id, err := validateUUID(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		var findings []models.Finding
 		if err := db.Where("scan_id = ?", id).Find(&findings).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -281,22 +392,34 @@ func getScanFindings(db *gorm.DB) gin.HandlerFunc {
 // Finding handlers
 func listFindings(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		severity := c.Query("severity")
-		projectID := c.Query("project_id")
-		isFalsePositive := c.Query("is_false_positive")
-		
+		severity, err := validateSeverity(c.Query("severity"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		fp, fpSet, err := validateBool(c.Query("is_false_positive"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": "invalid is_false_positive"})
+			return
+		}
+
 		var findings []models.Finding
 		query := db.Preload("Scan")
-		
+
 		if severity != "" {
 			query = query.Where("severity = ?", severity)
 		}
-		if projectID != "" {
+		if raw := c.Query("project_id"); raw != "" {
+			projectID, err := validateUUID(raw)
+			if err != nil {
+				c.JSON(400, gin.H{"error": "invalid project_id"})
+				return
+			}
 			query = query.Joins("JOIN scans ON findings.scan_id = scans.id").
 				Where("scans.project_id = ?", projectID)
 		}
-		if isFalsePositive != "" {
-			query = query.Where("is_false_positive = ?", isFalsePositive == "true")
+		if fpSet {
+			query = query.Where("is_false_positive = ?", fp)
 		}
 		
 		if err := query.Order("created_at DESC").Find(&findings).Error; err != nil {
@@ -309,20 +432,29 @@ func listFindings(db *gorm.DB) gin.HandlerFunc {
 
 func markFalsePositive(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
+		id, err := validateUUID(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		var req struct {
 			Reason string `json:"reason"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": "invalid request body"})
+			return
+		}
+		reason, err := validateReason(req.Reason)
+		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
-		
+
 		if err := db.Model(&models.Finding{}).
 			Where("id = ?", id).
 			Updates(map[string]interface{}{
 				"is_false_positive": true,
-				"false_positive_reason": req.Reason,
+				"false_positive_reason": reason,
 			}).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -334,12 +466,16 @@ func markFalsePositive(db *gorm.DB) gin.HandlerFunc {
 // Schedule handlers
 func listSchedules(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		projectID := c.Query("project_id")
-		var schedules []models.Schedule
 		query := db
-		if projectID != "" {
+		if raw := c.Query("project_id"); raw != "" {
+			projectID, err := validateUUID(raw)
+			if err != nil {
+				c.JSON(400, gin.H{"error": "invalid project_id"})
+				return
+			}
 			query = query.Where("project_id = ?", projectID)
 		}
+		var schedules []models.Schedule
 		if err := query.Find(&schedules).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -348,12 +484,73 @@ func listSchedules(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+type scheduleRequest struct {
+	ProjectID string `json:"project_id"`
+	Name      string `json:"name"`
+	CronExpr  string `json:"cron_expr"`
+	Tools     string `json:"tools"`
+	Strategy  string `json:"strategy"`
+	Enabled   *bool  `json:"enabled"`
+}
+
+type scheduleFields struct {
+	projectID uuid.UUID
+	name      string
+	cronExpr  string
+	tools     string
+	strategy  string
+	enabled   bool
+}
+
+func (r scheduleRequest) validate() (scheduleFields, error) {
+	var f scheduleFields
+	var err error
+	if f.projectID, err = validateUUID(r.ProjectID); err != nil {
+		return f, errors.New("invalid project_id")
+	}
+	if f.name, err = validateName(r.Name); err != nil {
+		return f, err
+	}
+	if f.cronExpr, err = validateCronExpr(r.CronExpr); err != nil {
+		return f, err
+	}
+	if f.tools, err = normalizeTools(r.Tools); err != nil {
+		return f, err
+	}
+	if f.strategy, err = validateStrategy(r.Strategy); err != nil {
+		return f, err
+	}
+	f.enabled = true
+	if r.Enabled != nil {
+		f.enabled = *r.Enabled
+	}
+	return f, nil
+}
+
 func createSchedule(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var schedule models.Schedule
-		if err := c.ShouldBindJSON(&schedule); err != nil {
+		var req scheduleRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": "invalid request body"})
+			return
+		}
+		f, err := req.validate()
+		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
+		}
+		var project models.Project
+		if err := db.Where("id = ?", f.projectID).First(&project).Error; err != nil {
+			c.JSON(404, gin.H{"error": "Project not found"})
+			return
+		}
+		schedule := models.Schedule{
+			ProjectID: f.projectID,
+			Name:      f.name,
+			CronExpr:  f.cronExpr,
+			Tools:     f.tools,
+			Strategy:  f.strategy,
+			Enabled:   f.enabled,
 		}
 		if err := db.Create(&schedule).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -365,17 +562,35 @@ func createSchedule(db *gorm.DB) gin.HandlerFunc {
 
 func updateSchedule(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
+		id, err := validateUUID(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		var schedule models.Schedule
 		if err := db.Where("id = ?", id).First(&schedule).Error; err != nil {
 			c.JSON(404, gin.H{"error": "Schedule not found"})
 			return
 		}
-		if err := c.ShouldBindJSON(&schedule); err != nil {
+		var req scheduleRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": "invalid request body"})
+			return
+		}
+		f, err := req.validate()
+		if err != nil {
 			c.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
-		if err := db.Save(&schedule).Error; err != nil {
+		// Update only client-controllable fields; never id/timestamps.
+		if err := db.Model(&schedule).Updates(map[string]interface{}{
+			"project_id": f.projectID,
+			"name":       f.name,
+			"cron_expr":  f.cronExpr,
+			"tools":      f.tools,
+			"strategy":   f.strategy,
+			"enabled":    f.enabled,
+		}).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
@@ -385,7 +600,11 @@ func updateSchedule(db *gorm.DB) gin.HandlerFunc {
 
 func deleteSchedule(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		id := c.Param("id")
+		id, err := validateUUID(c.Param("id"))
+		if err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
 		if err := db.Delete(&models.Schedule{}, "id = ?", id).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -431,7 +650,7 @@ func getVulnerabilityTrends(db *gorm.DB) gin.HandlerFunc {
 			Count    int64  `json:"count"`
 		}
 		
-		var trends []TrendData
+		trends := []TrendData{}
 		db.Model(&models.Finding{}).
 			Select("DATE(created_at) as date, severity, COUNT(*) as count").
 			Where("is_false_positive = ?", false).

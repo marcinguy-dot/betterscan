@@ -1,9 +1,10 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { API_URL } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,11 +17,10 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-function LoginForm() {
+export default function RegisterPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") || "/"
 
+  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -29,28 +29,53 @@ function LoginForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    setLoading(true)
-    const res = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    })
-    setLoading(false)
-    if (res?.error) {
-      setError("Invalid email or password.")
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters.")
       return
     }
-    router.push(callbackUrl)
-    router.refresh()
+
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/api/v1/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || "Failed to create account.")
+        setLoading(false)
+        return
+      }
+
+      // Account created; establish a next-auth session via the credentials flow.
+      const signInRes = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
+      setLoading(false)
+      if (signInRes?.error) {
+        setError("Account created, but sign-in failed. Please log in.")
+        router.push("/login")
+        return
+      }
+      router.push("/")
+      router.refresh()
+    } catch {
+      setError("Failed to reach the server.")
+      setLoading(false)
+    }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Sign in to Checkmate</CardTitle>
+          <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>
-            Enter your email and password to continue
+            Sign up to start scanning your projects
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -60,6 +85,16 @@ function LoginForm() {
                 {error}
               </div>
             )}
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                type="text"
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -76,34 +111,30 @@ function LoginForm() {
               <Input
                 id="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 required
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <p className="text-xs text-gray-500">
+                At least 8 characters.
+              </p>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-3">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? "Creating account..." : "Create account"}
             </Button>
             <p className="text-sm text-gray-500">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-blue-600 hover:underline">
-                Create one
+              Already have an account?{" "}
+              <Link href="/login" className="text-blue-600 hover:underline">
+                Sign in
               </Link>
             </p>
           </CardFooter>
         </form>
       </Card>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={null}>
-      <LoginForm />
-    </Suspense>
   )
 }
