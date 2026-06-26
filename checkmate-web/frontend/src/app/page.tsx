@@ -67,9 +67,9 @@ export default function Dashboard() {
         trendsRes.json(),
       ])
 
-      setStats(statsData)
-      setScans(scansData)
-      setTrends(trendsData)
+      setStats(statsData ?? null)
+      setScans(Array.isArray(scansData) ? scansData : [])
+      setTrends(Array.isArray(trendsData) ? trendsData : [])
     } catch (error) {
       console.error("Failed to fetch data:", error)
     } finally {

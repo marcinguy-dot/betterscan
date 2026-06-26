@@ -650,7 +650,7 @@ func getVulnerabilityTrends(db *gorm.DB) gin.HandlerFunc {
 			Count    int64  `json:"count"`
 		}
 		
-		var trends []TrendData
+		trends := []TrendData{}
 		db.Model(&models.Finding{}).
 			Select("DATE(created_at) as date, severity, COUNT(*) as count").
 			Where("is_false_positive = ?", false).
