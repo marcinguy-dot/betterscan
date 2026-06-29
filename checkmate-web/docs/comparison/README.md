@@ -1,42 +1,50 @@
 # Frontend Comparison: Next.js vs jQuery
 
-Checkmate has **two** interchangeable frontends that talk to the same Go backend
-(same local email+password / JWT auth). They live on separate branches so you
-can run, compare, and pick the one you prefer.
-
-| Frontend | Branch | Stack | Port |
-|---|---|---|---|
-| Next.js | [`frontend-nextjs`](https://codeberg.org/marcinguy/checkmate-go/src/branch/frontend-nextjs) | Next.js 16 + Tailwind + Base UI + Recharts | 3000 |
-| jQuery  | [`frontend-jquery`](https://codeberg.org/marcinguy/checkmate-go/src/branch/frontend-jquery) | jQuery 3.7 + Bootstrap 5 + Chart.js (zero-build) | 8081 |
-
-## Identical end-to-end flow (both pass)
-
-1. Log in with email + password
-2. Dashboard: stats cards + severity breakdown
-3. Vulnerability Trends charts
-4. Projects list
-5. Log out (avatar dropdown / menu)
-6. Register a new account → auto-login
-
-Full Next.js report with screenshots: [nextjs-e2e-test-report.md](nextjs-e2e-test-report.md)
-
-## Look & feel
+Checkmate ships **two** interchangeable frontends that talk to the same Go
+backend (same local email+password / JWT auth). Both pass the same end-to-end
+flow. Pick whichever look & feel you prefer — screenshots of every screen are
+below so you can compare before installing.
 
 | | Next.js | jQuery |
 |---|---|---|
-| Styling | Tailwind + shadcn / Base UI | Bootstrap 5 |
+| Stack | Next.js 16 + Tailwind + Base UI + Recharts | jQuery 3.7 + Bootstrap 5 + Chart.js |
+| Port | http://localhost:3000 | http://localhost:8081 |
+| Build | `npm` install + build step, periodic upgrades | zero-build, vendored, runs untouched for years |
 | Look | flat, airy, lots of white space | denser, classic Bootstrap cards |
-| Charts | Recharts (SVG) | Chart.js |
-| Build | needs `npm` + build step + periodic upgrades | zero-build, vendored, runs untouched for years |
-| Type safety / DX | TypeScript, components, hot reload | plain JS, manual DOM |
-| Bundle | larger, SSR/routing features | ~250 KB vendored libs, static files |
-| Behavior | identical feature set & flow | identical feature set & flow |
 
-**Trade-off in one line:** Next.js gives a nicer developer experience and a more
-modern look but needs ongoing maintenance (npm audit churn, build, upgrades);
-the jQuery version is plainer but is zero-build and will run for years without
-touching it.
+Run both side by side: `cd checkmate-web && docker compose up` →
+Next.js on :3000, jQuery on :8081.
 
-## Screenshots
+## Side-by-side screenshots
 
-The `screenshots/` folder contains the Next.js evidence frames.
+### Login
+| Next.js | jQuery |
+|---|---|
+| ![Next.js login](screenshots/nextjs/01-login.png) | ![jQuery login](screenshots/jquery/01-login.png) |
+
+### Dashboard (stats + severity breakdown)
+| Next.js | jQuery |
+|---|---|
+| ![Next.js dashboard](screenshots/nextjs/02-dashboard.png) | ![jQuery dashboard](screenshots/jquery/02-dashboard.png) |
+
+### Vulnerability trends / severity distribution
+| Next.js | jQuery |
+|---|---|
+| ![Next.js trends](screenshots/nextjs/03-trends.png) | ![jQuery distribution](screenshots/jquery/03-trends.png) |
+
+### Projects
+| Next.js | jQuery |
+|---|---|
+| ![Next.js projects](screenshots/nextjs/04-projects.png) | ![jQuery projects](screenshots/jquery/04-projects.png) |
+
+### Register
+| Next.js | jQuery |
+|---|---|
+| ![Next.js register](screenshots/nextjs/06-register.png) | ![jQuery register](screenshots/jquery/05-register.png) |
+
+Charts/severity panels are empty in these shots because there are no scans yet —
+the same is true for both frontends.
+
+The Next.js build also has a user dropdown menu for logout
+([screenshot](screenshots/nextjs/05-user-menu.png)); the jQuery build puts the
+Log out button directly in the nav bar.
