@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -43,9 +44,19 @@ func main() {
 	// Initialize Gin router
 	router := gin.Default()
 
-	// CORS middleware
+	// CORS middleware. Origins default to the Next.js (3000) and jQuery (8081)
+	// frontends; override with a comma-separated CORS_ORIGINS env var.
+	allowOrigins := []string{"http://localhost:3000", "http://localhost:8081"}
+	if raw := strings.TrimSpace(os.Getenv("CORS_ORIGINS")); raw != "" {
+		allowOrigins = nil
+		for _, o := range strings.Split(raw, ",") {
+			if o = strings.TrimSpace(o); o != "" {
+				allowOrigins = append(allowOrigins, o)
+			}
+		}
+	}
 	router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     allowOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
