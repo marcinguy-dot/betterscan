@@ -46,3 +46,34 @@ also available as single-frontend branches
 ([`frontend-nextjs`](https://codeberg.org/marcinguy/checkmate-go/src/branch/frontend-nextjs),
 [`frontend-jquery`](https://codeberg.org/marcinguy/checkmate-go/src/branch/frontend-jquery))
 if you want to deploy only one.
+
+## Security & Isolation: Qubes OS for Workers
+
+When scanning untrusted source code, container escape vulnerabilities in Docker (e.g. kernel exploits or runtime bugs in `runc`) pose a threat to the host system.
+
+To mitigate this, Checkmate can run the worker component inside **Qubes OS** to isolate untrusted code execution using Xen-based hypervisor-level compartmentalization:
+
+```mermaid
+graph TD
+    subgraph Qubes OS Host
+        Dom0[Dom0: Admin Domain - Air-gapped / No Network]
+        
+        subgraph AppVM 1: Web Frontend & DB
+            Frontend[Next.js App / Postgres]
+        end
+
+        subgraph AppVM 2: Worker Qube
+            subgraph Docker Container
+                Worker[Worker Running Untrusted Code]
+            end
+        end
+    end
+    
+    Worker -.->|1. Container Escape| AppVM 2
+    AppVM 2 -->|2. Trapped by Xen Hypervisor| Dom0
+```
+
+Even if malicious code manages to exploit a vulnerability and escape the Docker container, the attacker remains trapped inside the isolated VM boundary, protecting your host, database, and other components from being compromised.
+
+For detailed setup instructions on making Docker storage persistent in Qubes OS using `bind-dirs` or shifting the `data-root`, see [QUBES_OS_DOCKER.md](QUBES_OS_DOCKER.md).
+
