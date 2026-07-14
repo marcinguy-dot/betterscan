@@ -16,7 +16,7 @@ checkmate-web/
 
 ## Features
 
-- **Authentication**: SSO via OAuth2/OIDC (Google, GitHub)
+- **Authentication**: SSO via OAuth2/OIDC (Google, GitHub, Gluu)
 - **Dashboard**: Scan history, vulnerability trends, statistics
 - **Project Management**: Add/remove projects, configure rules
 - **Scan Execution**: Trigger scans with configurable tools and strategies
@@ -160,6 +160,19 @@ See `.env.example` for required environment variables:
 - `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
 - `GITHUB_CLIENT_ID` - GitHub OAuth client ID
 - `GITHUB_CLIENT_SECRET` - GitHub OAuth client secret
+- `GLUU_ISSUER` - Gluu server issuer URL (must match `/.well-known/openid-configuration`)
+- `GLUU_CLIENT_ID` - Gluu OAuth client ID
+- `GLUU_CLIENT_SECRET` - Gluu OAuth client secret
+- `NEXT_PUBLIC_GLUU_ENABLED` - Set to `true` to show the Gluu sign-in button
+
+### Gluu Setup (optional)
+
+1. In Gluu oxTrust, create an OpenID Connect client.
+2. Set the redirect URI to `{NEXTAUTH_URL}/api/auth/callback/gluu` (e.g. `http://localhost:3000/api/auth/callback/gluu` for local dev).
+3. Enable scopes: `openid`, `email`, `profile`.
+4. Copy the client ID and secret into `.env`.
+5. Set `GLUU_ISSUER` to the exact `issuer` value from `https://{hostname}/.well-known/openid-configuration`.
+6. Set `NEXT_PUBLIC_GLUU_ENABLED=true` to show the Gluu button on the login page.
 
 ### Frontend
 - `NEXT_PUBLIC_API_URL` - Backend API URL
@@ -180,7 +193,7 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment guides:
 ## Database Schema
 
 ### Users
-- OAuth2 authentication (Google, GitHub)
+- OAuth2 authentication (Google, GitHub, Gluu)
 - Role-based access control
 - Profile information
 

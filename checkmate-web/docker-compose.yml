@@ -87,6 +87,12 @@ services:
       NEXTAUTH_URL: http://localhost:3000
       # Encrypts the next-auth session cookie. Replace in production.
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-change-me-to-a-strong-random-secret}
+      GOOGLE_CLIENT_ID: your-google-client-id
+      GITHUB_CLIENT_ID: your-github-client-id
+      GLUU_ISSUER: https://your-gluu-server.example.com
+      GLUU_CLIENT_ID: your-gluu-client-id
+      GLUU_CLIENT_SECRET: your-gluu-client-secret
+      NEXT_PUBLIC_GLUU_ENABLED: "false"
     ports:
       - "3000:3000"
     depends_on:
