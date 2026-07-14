@@ -35,9 +35,10 @@
     <header class="hero pt-16 pb-20 px-6">
         <div class="max-w-4xl mx-auto text-center">
             <h1 class="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Betterscan</h1>
-            <p class="text-lg text-gray-600 mb-10 leading-relaxed">
-          Betterscan scanning orchestration tool in Go as a high-performance, standalone CLI. The new Go-based runner executes scans sequentially or in parallel and generates Code Property Graphs (AST, CFG, and DFG) directly from raw source code with no compile environment required. It normalizes all findings into a unified format and features optional LLM-enriched reporting in JSON, SARIF, and HTML.     
-          <div class="flex flex-wrap justify-center gap-4">
+            <p class="text-lg text-gray-600 mb-10 leading-relaxed max-w-3xl mx-auto">
+                A high-performance, standalone Go CLI runner that executes security scans sequentially or in parallel. Harness the power of deep <strong>Code Property Graphs (AST, CFG, DFG)</strong> directly from raw source code with zero build dependencies, normalized findings, and optional LLM enrichment.
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
                 <a href="#usage" class="bg-[#21262d] hover:bg-[#30363d] text-white px-6 py-2.5 rounded-md font-semibold text-sm transition">Get Started</a>
                 <code class="flex items-center px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-800">go build -o checkmate-go .</code>
             </div>
@@ -46,21 +47,50 @@
 
     <!-- Main Content -->
     <main class="max-w-6xl mx-auto px-6 py-16">
+        
+        <!-- Feature Highlights -->
         <div class="grid md:grid-cols-3 gap-6 mb-20">
             <div class="card p-6">
-                <div class="text-xl font-bold mb-2">🚀 Parallel Execution</div>
-                <p class="text-sm text-gray-600 leading-relaxed">Core-limited worker pool for concurrent scans. Supports OpenGrep, Trivy, Bandit, Brakeman, Gostaticcheck, Fraunhoffer CPG, Joern.</p>
+                <div class="text-xl font-bold mb-2">🚀 Parallel Performance</div>
+                <p class="text-sm text-gray-600 leading-relaxed">Core-limited worker pool built in Go for concurrent engine execution. Orchestrates OpenGrep, Trivy, Bandit, Brakeman, Gostaticcheck, and Joern.</p>
             </div>
             <div class="card p-6">
                 <div class="text-xl font-bold mb-2">🤖 LLM Enrichment</div>
-                <p class="text-sm text-gray-600 leading-relaxed">Enhance security findings with AI context using OpenAI-compatible endpoints and swappable models.</p>
+                <p class="text-sm text-gray-600 leading-relaxed">Overlay security analysis with AI context using OpenAI-compatible endpoints to explain impact and write customized fixes directly in your reports.</p>
             </div>
             <div class="card p-6">
-                <div class="text-xl font-bold mb-2">📋 Normalized Output</div>
-                <p class="text-sm text-gray-600 leading-relaxed">Unified JSON/SARIF/HTML formats with smart deduplication and finding collapsing.</p>
+                <div class="text-xl font-bold mb-2">📋 Unified Outputs</div>
+                <p class="text-sm text-gray-600 leading-relaxed">No more juggling tool-specific logs. Normalizes all findings into a clean, unified schema supporting JSON, SARIF, and static HTML with smart deduplication.</p>
             </div>
         </div>
 
+        <!-- The CPG Advantage Section -->
+        <section class="mb-20 bg-slate-50 border border-gray-200 rounded-lg p-8 md:p-12">
+            <div class="max-w-3xl mx-auto">
+                <span class="text-xs font-bold uppercase tracking-widest text-blue-600">The Analysis Engine</span>
+                <h2 class="text-3xl font-extrabold mt-2 mb-4 text-gray-900">Why Code Property Graphs (CPG)?</h2>
+                <p class="text-gray-600 mb-8 leading-relaxed">
+                    Standard SAST tools rely on shallow <strong>regex-based grepping</strong> or isolated <strong>syntax parsing (AST)</strong>. They flag keyword matches but miss how data moves. Betterscan implements the Code Property Graph (CPG) framework to combine code structure, control pathways, and data flows into a unified analysis model.
+                </p>
+
+                <div class="grid sm:grid-cols-3 gap-4 border-t border-gray-200 pt-8">
+                    <div>
+                        <div class="text-xs font-bold text-gray-400 uppercase">Grepping / Pattern Matching</div>
+                        <div class="text-sm font-semibold text-gray-700 mt-1">Superficial matches. High noise, high false positives, zero flow tracking.</div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-gray-400 uppercase">AST Parsing</div>
+                        <div class="text-sm font-semibold text-gray-700 mt-1">Understands syntax and variables but lacks logical path analysis.</div>
+                    </div>
+                    <div class="border-l-2 border-blue-500 pl-4">
+                        <div class="text-xs font-bold text-blue-600 uppercase">Betterscan CPG</div>
+                        <div class="text-sm font-semibold text-gray-900 mt-1">Unifies AST, CFG, and DFG to track data end-to-end from source to sink.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Usage & Technical Details -->
         <section id="usage" class="space-y-10">
             <h2 class="text-2xl font-bold border-b pb-2">Usage Examples</h2>
             
@@ -91,21 +121,21 @@
                     <ul class="space-y-3 text-sm text-gray-600">
                         <li class="flex items-start gap-2">
                             <span class="text-green-600 font-bold">✓</span> 
-                            <span><strong>Sequential:</strong> Predictable one-by-one execution.</span>
+                            <span><strong>Sequential:</strong> Predictable, step-by-step scanner execution.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="text-green-600 font-bold">✓</span> 
-                            <span><strong>Parallel:</strong> High-speed concurrent worker pool.</span>
+                            <span><strong>Parallel:</strong> High-speed concurrent execution using a Go worker pool.</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <span class="text-green-600 font-bold">✓</span> 
-                            <span><strong>Auto-Install:</strong> Install missing tools via <code>--install-missing</code>.</span>
+                            <span><strong>Auto-Install:</strong> Automatically download and configure missing local tooling dependencies using the <code>--install-missing</code> flag.</span>
                         </li>
                     </ul>
                 </div>
                 <div>
                     <h3 class="text-lg font-bold mb-4 text-gray-800">Deployment Ready</h3>
-                    <p class="text-sm text-gray-600 mb-4 leading-relaxed">Ready-to-use templates for cloud-scale scanning:</p>
+                    <p class="text-sm text-gray-600 mb-4 leading-relaxed">Ready-to-use templates for cloud-scale automated scanning:</p>
                     <div class="flex flex-wrap gap-3">
                         <a href="https://codeberg.org/marcinguy/checkmate-go" target="_blank" class="tag hover:bg-blue-100 transition">Cloud Run Jobs</a>
                         <a href="https://codeberg.org/marcinguy/checkmate-go" target="_blank" class="tag hover:bg-blue-100 transition">ECS/Fargate</a>
