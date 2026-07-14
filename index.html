@@ -65,7 +65,7 @@
         </div>
 
         <!-- The CPG Advantage Section -->
-        <section class="mb-20 bg-slate-50 border border-gray-200 rounded-lg p-8 md:p-12">
+        <section class="mb-12 bg-slate-50 border border-gray-200 rounded-lg p-8 md:p-12">
             <div class="max-w-3xl mx-auto">
                 <span class="text-xs font-bold uppercase tracking-widest text-blue-600">The Analysis Engine</span>
                 <h2 class="text-3xl font-extrabold mt-2 mb-4 text-gray-900">Why Code Property Graphs (CPG)?</h2>
@@ -86,6 +86,48 @@
                         <div class="text-xs font-bold text-blue-600 uppercase">Betterscan CPG</div>
                         <div class="text-sm font-semibold text-gray-900 mt-1">Unifies AST, CFG, and DFG to track data end-to-end from source to sink.</div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- New: Self-Hosted Web Platform Section -->
+        <section class="mb-20 border border-gray-200 rounded-lg p-8 md:p-12">
+            <div class="max-w-3xl mx-auto flex flex-col md:flex-row md:items-center gap-8">
+                <div class="flex-1">
+                    <span class="text-xs font-bold uppercase tracking-widest text-purple-600">UI & Dashboard</span>
+                    <h2 class="text-3xl font-extrabold mt-2 mb-4 text-gray-900">Go Self-Hosted Web Platform</h2>
+                    <p class="text-gray-600 mb-4 leading-relaxed">
+                        Prefer a visual dashboard over the terminal? Betterscan includes **checkmate-web**, a lightweight, self-hosted web interface built to run natively in your own environment. 
+                    </p>
+                    <ul class="space-y-2 text-sm text-gray-600 mb-6">
+                        <li class="flex items-center gap-2">
+                            <span class="text-purple-600 font-bold">✦</span>
+                            <span>Interactive dashboard to manage and trigger scans</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-purple-600 font-bold">✦</span>
+                            <span>Visual historical trends and vulnerability tracking over time</span>
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="text-purple-600 font-bold">✦</span>
+                            <span>Easy local setup with minimal infrastructure overhead</span>
+                        </li>
+                    </ul>
+                    <a href="https://codeberg.org/marcinguy/checkmate-go/src/branch/main/checkmate-web" target="_blank" class="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 transition">
+                        Explore checkmate-web on Codeberg <span>&rarr;</span>
+                    </a>
+                </div>
+                <div class="w-full md:w-80 bg-gray-900 text-gray-100 rounded-md p-5 font-mono text-xs border border-gray-800 self-start">
+                    <div class="flex gap-1.5 mb-3 border-b border-gray-800 pb-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                        <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
+                    </div>
+                    <p class="text-gray-500 mb-2"># Spin up the web interface</p>
+                    <p class="text-purple-400">cd checkmate-web</p>
+                    <p class="text-blue-400">go run main.go</p>
+                    <p class="text-gray-500 mt-4"># Web app running at:</p>
+                    <p class="text-green-400">http://localhost:8080</p>
                 </div>
             </div>
         </section>
