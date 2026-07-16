@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Betterscan - High-Performance Security Scanner with best accuracy</title>
+    <title>Checkmate - High-Performance Security Scanner with best accuracy</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         html { scroll-behavior: smooth; }
@@ -22,7 +22,7 @@
     <nav class="max-w-6xl mx-auto p-6 flex justify-between items-center">
         <div>
             <a href="#" class="text-lg font-bold tracking-tight text-[#1f2328] hover:text-blue-600 transition-colors">
-                Betterscan
+                Checkmate
             </a>
         </div>
         <div class="flex gap-6 text-sm font-medium">
@@ -34,7 +34,7 @@
     <!-- Hero Section -->
     <header class="hero pt-16 pb-20 px-6">
         <div class="max-w-4xl mx-auto text-center">
-            <h1 class="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Betterscan</h1>
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-6 tracking-tight">Checkmate</h1>
             <p class="text-lg text-gray-600 mb-10 leading-relaxed max-w-3xl mx-auto">
                 A high-performance, standalone Go CLI runner that executes security scans sequentially or in parallel. Harness the power of deep <strong>Code Property Graphs (AST, CFG, DFG)</strong> directly from raw source code with zero build dependencies, normalized findings, and optional LLM enrichment.
             </p>
@@ -52,7 +52,7 @@
         <div class="grid md:grid-cols-3 gap-6 mb-20">
             <div class="card p-6">
                 <div class="text-xl font-bold mb-2">🚀 Parallel Performance</div>
-                <p class="text-sm text-gray-600 leading-relaxed">Core-limited worker pool built in Go for concurrent engine execution. Orchestrates OpenGrep, Trivy, Bandit, Brakeman, Gostaticcheck, and Joern.</p>
+                <p class="text-sm text-gray-600 leading-relaxed">Core-limited worker pool built in Go for concurrent engine execution. Orchestrates OpenGrep, Trivy, Bandit, Brakeman, Gostaticcheck, and Fraunhofer CPG.</p>
             </div>
             <div class="card p-6">
                 <div class="text-xl font-bold mb-2">🤖 LLM Enrichment</div>
@@ -70,7 +70,7 @@
                 <span class="text-xs font-bold uppercase tracking-widest text-blue-600">The Analysis Engine</span>
                 <h2 class="text-3xl font-extrabold mt-2 mb-4 text-gray-900">Why Code Property Graphs (CPG)?</h2>
                 <p class="text-gray-600 mb-8 leading-relaxed">
-                    Standard SAST tools rely on shallow <strong>regex-based grepping</strong> or isolated <strong>syntax parsing (AST)</strong>. They flag keyword matches but miss how data moves. Betterscan implements the Code Property Graph (CPG) framework to combine code structure, control pathways, and data flows into a unified analysis model.
+                    Standard SAST tools rely on shallow <strong>regex-based grepping</strong> or isolated <strong>syntax parsing (AST)</strong>. They flag keyword matches but miss how data moves. Checkmate implements the Code Property Graph (CPG) framework via Fraunhofer CPG to combine code structure, control pathways, and data flows into a unified analysis model.
                 </p>
 
                 <div class="grid sm:grid-cols-3 gap-4 border-t border-gray-200 pt-8">
@@ -83,7 +83,7 @@
                         <div class="text-sm font-semibold text-gray-700 mt-1">Understands syntax and variables but lacks logical path analysis.</div>
                     </div>
                     <div class="border-l-2 border-blue-500 pl-4">
-                        <div class="text-xs font-bold text-blue-600 uppercase">Betterscan CPG</div>
+                        <div class="text-xs font-bold text-blue-600 uppercase">Checkmate CPG</div>
                         <div class="text-sm font-semibold text-gray-900 mt-1">Unifies AST, CFG, and DFG to track data end-to-end from source to sink.</div>
                     </div>
                 </div>
@@ -97,7 +97,7 @@
                     <span class="text-xs font-bold uppercase tracking-widest text-purple-600">UI & Dashboard</span>
                     <h2 class="text-3xl font-extrabold mt-2 mb-4 text-gray-900">Go Self-Hosted Web Platform</h2>
                     <p class="text-gray-600 mb-4 leading-relaxed">
-                        Prefer a visual dashboard over the terminal? Betterscan includes **checkmate-web**, a lightweight, self-hosted web interface built to run natively in your own environment. 
+                        Prefer a visual dashboard over the terminal? Checkmate includes **checkmate-web**, a lightweight, self-hosted web interface built to run natively in your own environment. 
                     </p>
                     <ul class="space-y-2 text-sm text-gray-600 mb-6">
                         <li class="flex items-center gap-2">
@@ -153,7 +153,7 @@
                         <code>./checkmate-go \
   --code-dir ./project \
   --llm-enrich \
-  --llm-model gpt-4o-mini \
+  --llm-model gpt-4.1-mini \
   --sarif-out results.sarif \
   --html-out results.html</code>
                     </div>
