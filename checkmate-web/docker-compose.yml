@@ -32,10 +32,12 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: golang:1.23-alpine
     container_name: checkmate-backend
+    working_dir: /app
+    # Run from the mounted source tree so local auth route changes apply without
+    # rebuilding a stale image binary.
+    command: sh -c "go mod download && go run ."
     environment:
       DATABASE_URL: host=postgres user=postgres password=postgres dbname=checkmate port=5432 sslmode=disable
       REDIS_ADDR: redis:6379
@@ -52,7 +54,6 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
-      - /app/.git
 
   worker:
     build:

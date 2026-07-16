@@ -8,10 +8,24 @@ const INTERNAL_API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:8080"
 
+const authSecret =
+  process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET
+
+const googleConfigured =
+  process.env.GOOGLE_CLIENT_ID &&
+  process.env.GOOGLE_CLIENT_SECRET &&
+  process.env.GOOGLE_CLIENT_ID !== "your-google-client-id"
+
+const githubConfigured =
+  process.env.GITHUB_CLIENT_ID &&
+  process.env.GITHUB_CLIENT_SECRET &&
+  process.env.GITHUB_CLIENT_ID !== "your-github-client-id"
+
 const gluuConfigured =
   process.env.GLUU_CLIENT_ID &&
   process.env.GLUU_CLIENT_SECRET &&
-  process.env.GLUU_ISSUER
+  process.env.GLUU_ISSUER &&
+  process.env.GLUU_CLIENT_ID !== "your-gluu-client-id"
 
 const gluuProvider = {
   id: "gluu",
@@ -24,16 +38,26 @@ const gluuProvider = {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: authSecret,
+  trustHost: true,
   session: { strategy: "jwt" },
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
-    GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID || "",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
-    }),
+    ...(googleConfigured
+      ? [
+          Google({
+            clientId: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          }),
+        ]
+      : []),
+    ...(githubConfigured
+      ? [
+          GitHub({
+            clientId: process.env.GITHUB_CLIENT_ID!,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+          }),
+        ]
+      : []),
     Credentials({
       name: "Email and Password",
       credentials: {
