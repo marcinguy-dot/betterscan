@@ -16,6 +16,19 @@
       <button id="refreshBtn" class="btn btn-primary">Refresh</button>
     </div>
 
+    <div class="alert alert-info d-flex align-items-start gap-2 mb-4" role="alert">
+      <span aria-hidden="true">&#128737;</span>
+      <div>
+        <strong>Built with security in mind.</strong>
+        Checkmate isolates every scan worker in its own hardware-enforced microVM
+        (CubeOS / KVM), so untrusted code that attempts a container escape is
+        confined to a single ephemeral VM rather than shared host resources.
+        This is <strong>defense in depth</strong>: an independent isolation layer
+        that protects you even when the host kernel or Docker runtime is not
+        fully patched.
+      </div>
+    </div>
+
     <div id="loading" class="text-muted">Loading dashboard...</div>
 
     <div id="content" class="d-none">
