@@ -34,6 +34,29 @@ export default function ProjectsPage() {
     language: "",
   })
   const [formError, setFormError] = useState("")
+  const [scanningProjects, setScanningProjects] = useState<Set<string>>(new Set())
+
+  const triggerScan = async (projectId: string) => {
+    setScanningProjects((prev) => new Set(prev).add(projectId))
+    try {
+      await authedFetch("/api/v1/scans", {
+        method: "POST",
+        body: JSON.stringify({
+          project_id: projectId,
+          strategy: "parallel",
+          tools: "opengrep,trivy",
+        }),
+      })
+    } catch (error) {
+      console.error("Failed to trigger scan:", error)
+    } finally {
+      setScanningProjects((prev) => {
+        const next = new Set(prev)
+        next.delete(projectId)
+        return next
+      })
+    }
+  }
 
   // Mirror the backend's allowlist so obviously invalid input is caught early.
   // The backend remains the authoritative validation boundary.
@@ -97,9 +120,12 @@ export default function ProjectsPage() {
         body: JSON.stringify(newProject),
       })
       if (res.ok) {
+        const createdProject = await res.json()
         setShowDialog(false)
         setNewProject({ name: "", description: "", repo_url: "", repo_branch: "main", language: "" })
-        fetchProjects()
+        await fetchProjects()
+        // Auto-trigger a scan for the newly created project
+        await triggerScan(createdProject.id)
       } else {
         const data = await res.json().catch(() => ({}))
         setFormError(data.error || "Failed to create project")
@@ -205,9 +231,19 @@ export default function ProjectsPage() {
                   <div className="text-xs text-gray-400">
                     Added {new Date(project.created_at).toLocaleDateString()}
                   </div>
-                  <Button variant="outline" className="w-full mt-4">
-                    View Scans
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button variant="outline" className="flex-1">
+                      View Scans
+                    </Button>
+                    <Button
+                      variant="default"
+                      className="flex-1"
+                      disabled={scanningProjects.has(project.id)}
+                      onClick={() => triggerScan(project.id)}
+                    >
+                      {scanningProjects.has(project.id) ? "Scanning..." : "Scan Now"}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
