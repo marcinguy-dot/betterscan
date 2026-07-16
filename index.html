@@ -90,7 +90,7 @@
             </div>
         </section>
 
-        <!-- New: Self-Hosted Web Platform Section -->
+        <!-- Updated: Self-Hosted Web Platform Section -->
         <section class="mb-20 border border-gray-200 rounded-lg p-8 md:p-12">
             <div class="max-w-3xl mx-auto flex flex-col md:flex-row md:items-center gap-8">
                 <div class="flex-1">
@@ -110,22 +110,25 @@
                         </li>
                         <li class="flex items-center gap-2">
                             <span class="text-purple-600 font-bold">✦</span>
-                            <span>Easy local setup with minimal infrastructure overhead</span>
+                            <span>Easy local setup using Docker with zero compilation needed</span>
                         </li>
                     </ul>
                     <a href="https://codeberg.org/marcinguy/checkmate-go/src/branch/main/checkmate-web" target="_blank" class="inline-flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 transition">
                         Explore checkmate-web on Codeberg <span>&rarr;</span>
                     </a>
                 </div>
-                <div class="w-full md:w-80 bg-gray-900 text-gray-100 rounded-md p-5 font-mono text-xs border border-gray-800 self-start">
+                <div class="w-full md:w-96 bg-gray-900 text-gray-100 rounded-md p-5 font-mono text-xs border border-gray-800 self-start">
                     <div class="flex gap-1.5 mb-3 border-b border-gray-800 pb-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>
                         <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
                         <span class="w-2.5 h-2.5 rounded-full bg-green-500"></span>
                     </div>
-                    <p class="text-gray-500 mb-2"># Spin up the web interface</p>
-                    <p class="text-purple-400">cd checkmate-web</p>
-                    <p class="text-blue-400">go run main.go</p>
+                    <p class="text-gray-500 mb-2"># Run the self-hosted platform locally</p>
+                    <p class="text-purple-400">docker run -d \</p>
+                    <p class="text-blue-400">  --name checkmate-web \</p>
+                    <p class="text-blue-400">  -p 8080:8080 \</p>
+                    <p class="text-blue-400">  -v /var/run/docker.sock:/var/run/docker.sock \</p>
+                    <p class="text-blue-400">  marcinguy/checkmate-web</p>
                     <p class="text-gray-500 mt-4"># Web app running at:</p>
                     <p class="text-green-400">http://localhost:8080</p>
                 </div>
