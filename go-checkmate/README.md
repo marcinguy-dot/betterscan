@@ -1,8 +1,8 @@
- # Checkmate Go
- 
+# Checkmate Go
+
 Go-based scanner runner with sequential/parallel execution, normalized findings,
 and optional LLM enrichment for JSON/SARIF/HTML outputs.
- 
+
 ## Features
 - Runs common Checkmate tools (OpenGrep, Trivy, Bandit, Brakeman, GoStaticcheck, Fraunhofer CPG)
 - Two strategies:
@@ -12,30 +12,30 @@ and optional LLM enrichment for JSON/SARIF/HTML outputs.
 - Output formats: JSON summary (`--json-out`), SARIF (`--sarif-out`), HTML (`--html-out`)
 - Passes `-j` to OpenGrep
 - Refreshes OpenGrep Aikido + Amplify rules before scan (by default)
- 
- ## Build
- 
- ```bash
- go build -o checkmate-go .
- ```
- 
- ## Usage
- 
- ```bash
+
+## Build
+
+```bash
+go build -o checkmate-go .
+```
+
+## Usage
+
+```bash
 ./checkmate-go --code-dir /path/to/project --strategy parallel --jobs 8
- ```
+```
 
 Install missing tools automatically (default on):
 
 ```bash
 ./checkmate-go --install-missing
 ```
- 
- Run both strategies and write JSON summary:
- 
- ```bash
- ./checkmate-go --code-dir /path/to/project --strategy both --jobs 8 --json-out results.json
- ```
+
+Run both strategies and write JSON summary:
+
+```bash
+./checkmate-go --code-dir /path/to/project --strategy both --jobs 8 --json-out results.json
+```
 
 Generate all output formats with LLM enrichment:
 
@@ -52,19 +52,19 @@ Generate all output formats with LLM enrichment:
   --llm-model gpt-4.1-mini \
   --llm-endpoint https://api.openai.com/v1/chat/completions
 ```
- 
- Use explicit rules paths (skip refresh):
- 
- ```bash
- ./checkmate-go \
-   --code-dir /path/to/project \
-   --rules-aikido "$HOME/.opengrep/rules/aikido-rules/rules" \
-   --rules-amplify "$HOME/.opengrep/rules/amplify-rules/rules" \
-   --no-refresh
- ```
- 
- Restrict tools (comma-separated):
- 
+
+Use explicit rules paths (skip refresh):
+
+```bash
+./checkmate-go \
+  --code-dir /path/to/project \
+  --rules-aikido "$HOME/.opengrep/rules/aikido-rules/rules" \
+  --rules-amplify "$HOME/.opengrep/rules/amplify-rules/rules" \
+  --no-refresh
+```
+
+Restrict tools (comma-separated):
+
 ```bash
 ./checkmate-go --tools opengrep,trivy,gostaticcheck --code-dir /path/to/project
 ```
@@ -99,10 +99,10 @@ You can optionally collapse findings across tools on the same `file:line`:
 When multiple findings collapse into one, the retained entry is the one with
 the longest message.
 
- ## Tool parallel support
- - OpenGrep: `-j <jobs>`
- - Others: no documented parallel flag; run as-is
- 
+## Tool parallel support
+- OpenGrep: `-j <jobs>`
+- Others: no documented parallel flag; run as-is
+
 ## LLM enrichment flags
 - `--llm-enrich`: enable enrichment
 - `--llm-model`: model to use (required when enrichment is enabled)

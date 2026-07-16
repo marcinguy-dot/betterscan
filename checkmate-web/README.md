@@ -58,7 +58,7 @@ checkmate-web/
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://codeberg.org/marcinguy/checkmate-go.git
 cd checkmate-web
 
 # Copy environment variables
@@ -254,5 +254,5 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues and questions:
-- GitHub Issues: <repository-url>/issues
+- Codeberg Issues: https://codeberg.org/marcinguy/checkmate-go/issues
 - Documentation: [DEPLOYMENT.md](./DEPLOYMENT.md)

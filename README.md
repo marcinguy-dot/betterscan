@@ -1,13 +1,13 @@
- # Checkmate5 Monorepo
- 
+# Checkmate5 Monorepo
+
 This repository contains the Go implementation of Checkmate:
- 
- - `go-checkmate/` – Go runner
+
+- `go-checkmate/` – Go runner
 - `deploy/cloud-run-jobs/go-checkmate/` – Cloud Run Jobs templates (run N tasks)
 - `deploy/ecs-fargate/go-checkmate/` – ECS/Fargate templates (run N tasks)
 - `broken-vulnerable-code-snippets/` – Vulnerable code dataset (cloned from https://github.com/snoopysecurity/Broken-Vulnerable-Code-Snippets)
- - `Speed.md` – Benchmark results
- 
+- `Speed.md` – Benchmark results
+
 For usage and setup, see `go-checkmate/README.md`.
 
 ## Web Platform Frontends: Next.js vs jQuery
@@ -57,7 +57,7 @@ To mitigate this, Checkmate can run the worker component inside **Qubes OS** to 
 graph TD
     subgraph Qubes OS Host
         Dom0[Dom0: Admin Domain - Air-gapped / No Network]
-        
+
         subgraph AppVM 1: Web Frontend & DB
             Frontend[Next.js App / Postgres]
         end
@@ -68,7 +68,7 @@ graph TD
             end
         end
     end
-    
+
     Worker -.->|1. Container Escape| AppVM 2
     AppVM 2 -->|2. Trapped by Xen Hypervisor| Dom0
 ```
