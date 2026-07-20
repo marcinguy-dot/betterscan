@@ -10,6 +10,8 @@ This repository contains the Go implementation of Checkmate:
 
 For usage and setup, see `go-checkmate/README.md`.
 
+**Graph engines:** Checkmate runs **Joern** for mature, excellent default vulnerability queries, and **Fraunhofer CPG** primarily for **new custom rules** and **project-specific enforcement** on a multi-language code property graph (library / extensible analyses—aligned with Fraunhofer’s platform framing and tools such as Codyze). Details: [go-checkmate/README.md § Graph engines](go-checkmate/README.md#graph-engines-joern-vs-fraunhofer-cpg).
+
 ## Web Platform Frontends: Next.js vs jQuery
 
 `checkmate-web/` provides a web UI for the platform with **two interchangeable
