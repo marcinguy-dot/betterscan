@@ -45,6 +45,18 @@ services:
       # Signs the JWT bearer tokens issued by the backend. Replace with a strong
       # random value in production (e.g. `openssl rand -hex 32`).
       JWT_SECRET: ${JWT_SECRET:-dev-change-me-to-a-strong-random-secret}
+      VCS_SECRET_KEY: ${VCS_SECRET_KEY:-dev-vcs-secret-change-me}
+      # GitHub App (install → permissions → private clone). Use mock for local/e2e.
+      GITHUB_APP_MOCK: ${GITHUB_APP_MOCK:-1}
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_SLUG: ${GITHUB_APP_SLUG:-}
+      GITHUB_APP_CLIENT_ID: ${GITHUB_APP_CLIENT_ID:-}
+      GITHUB_APP_CLIENT_SECRET: ${GITHUB_APP_CLIENT_SECRET:-}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+      GITHUB_APP_PRIVATE_KEY_PATH: ${GITHUB_APP_PRIVATE_KEY_PATH:-}
+      GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET:-}
+      CHECKMATE_PUBLIC_URL: ${CHECKMATE_PUBLIC_URL:-http://localhost:8080}
+      CHECKMATE_UI_URL: ${CHECKMATE_UI_URL:-http://localhost:3000}
     ports:
       - "8080:8080"
     depends_on:

@@ -31,14 +31,37 @@ type Project struct {
 	RepoURL     string    `json:"repo_url"`
 	RepoBranch  string    `gorm:"default:main" json:"repo_branch"`
 	Language    string    `json:"language"` // go, python, java, etc.
-	CreatedBy   uuid.UUID `gorm:"type:uuid;not null" json:"created_by"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
-	
+	// Optional link to a VCS connection (GitHub App, GitLab PAT, etc.) for private clone.
+	VcsConnectionID *uuid.UUID `gorm:"type:uuid;index" json:"vcs_connection_id,omitempty"`
+	RepoExternalID  string     `json:"repo_external_id,omitempty"`
+	RepoFullName    string     `json:"repo_full_name,omitempty"`
+	CreatedBy       uuid.UUID  `gorm:"type:uuid;not null" json:"created_by"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
+
 	// Relations
-	Scans       []Scan    `gorm:"foreignKey:ProjectID" json:"scans,omitempty"`
-	Schedules   []Schedule `gorm:"foreignKey:ProjectID" json:"schedules,omitempty"`
+	Scans         []Scan         `gorm:"foreignKey:ProjectID" json:"scans,omitempty"`
+	Schedules     []Schedule     `gorm:"foreignKey:ProjectID" json:"schedules,omitempty"`
+	VcsConnection *VcsConnection `gorm:"foreignKey:VcsConnectionID" json:"vcs_connection,omitempty"`
+}
+
+// VcsConnection links a user to a git host with credentials for listing repos and cloning.
+// Secrets are stored encrypted (SecretEnc); never expose them in JSON.
+type VcsConnection struct {
+	ID           uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	Provider     string    `gorm:"not null;index" json:"provider"`   // github | gitlab | bitbucket | generic
+	AuthType     string    `gorm:"not null" json:"auth_type"`        // github_app | pat | oauth
+	Host         string    `gorm:"not null" json:"host"`             // github.com, gitlab.com, ...
+	ExternalID   string    `gorm:"index" json:"external_id"`         // installation id, etc.
+	DisplayName  string    `json:"display_name"`
+	SecretEnc    string    `gorm:"type:text" json:"-"`               // encrypted PAT / refresh token / PEM material
+	CloneUser    string    `json:"clone_user,omitempty"`             // default HTTPS username for this connection
+	MetadataJSON string    `gorm:"type:text" json:"metadata,omitempty"`
+	CreatedBy    uuid.UUID `gorm:"type:uuid;not null;index" json:"created_by"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
 // Scan represents a security scan run

@@ -31,6 +31,7 @@ func main() {
 	// Auto-migrate schemas
 	if err := db.AutoMigrate(
 		&models.User{},
+		&models.VcsConnection{},
 		&models.Project{},
 		&models.Scan{},
 		&models.Finding{},
@@ -39,6 +40,17 @@ func main() {
 		&models.Webhook{},
 	); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
+	}
+
+	box, err := newSecretBox()
+	if err != nil {
+		log.Fatalf("Failed to init secret box: %v", err)
+	}
+	vcs := newVcsService(db, box)
+
+	queue, err := newQueueService()
+	if err != nil {
+		log.Printf("WARNING: Redis unavailable (%v); scans will stay pending until Redis is up", err)
 	}
 
 	// Initialize Gin router
@@ -77,6 +89,10 @@ func main() {
 		// Public auth routes
 		api.POST("/auth/register", auth.register)
 		api.POST("/auth/login", auth.login)
+
+		// GitHub App browser callback (may redirect unauthenticated users to UI).
+		api.GET("/vcs/github/callback", vcs.githubCallback)
+		api.POST("/vcs/github/webhooks", vcs.githubWebhook)
 	}
 
 	// Everything below requires a valid bearer token.
@@ -85,6 +101,18 @@ func main() {
 	{
 		protected.GET("/auth/me", auth.me)
 		protected.POST("/auth/logout", auth.logout)
+
+		// VCS integrations (GitHub App, GitLab/Bitbucket/generic PAT)
+		vcsGroup := protected.Group("/vcs")
+		{
+			vcsGroup.GET("/providers", vcs.providers)
+			vcsGroup.GET("/connections", vcs.listConnections)
+			vcsGroup.POST("/connections", vcs.createConnection)
+			vcsGroup.DELETE("/connections/:id", vcs.deleteConnection)
+			vcsGroup.GET("/connections/:id/repos", vcs.listRepos)
+			vcsGroup.GET("/github/install-url", vcs.githubInstallURL)
+			vcsGroup.POST("/github/finalize", vcs.githubFinalize)
+		}
 
 		// Project routes
 		projects := protected.Group("/projects")
@@ -100,7 +128,7 @@ func main() {
 		scans := protected.Group("/scans")
 		{
 			scans.GET("", listScans(db))
-			scans.POST("", createScan(db))
+			scans.POST("", createScan(db, queue, vcs))
 			scans.GET("/:id", getScan(db))
 			scans.GET("/:id/findings", getScanFindings(db))
 		}
@@ -167,11 +195,14 @@ func listProjects(db *gorm.DB) gin.HandlerFunc {
 }
 
 type projectRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	RepoURL     string `json:"repo_url"`
-	RepoBranch  string `json:"repo_branch"`
-	Language    string `json:"language"`
+	Name            string `json:"name"`
+	Description     string `json:"description"`
+	RepoURL         string `json:"repo_url"`
+	RepoBranch      string `json:"repo_branch"`
+	Language        string `json:"language"`
+	VcsConnectionID string `json:"vcs_connection_id"`
+	RepoExternalID  string `json:"repo_external_id"`
+	RepoFullName    string `json:"repo_full_name"`
 }
 
 // validate normalizes and validates the request, returning sanitized values.
@@ -215,12 +246,27 @@ func createProject(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 		project := models.Project{
-			Name:        name,
-			Description: desc,
-			RepoURL:     repoURL,
-			RepoBranch:  branch,
-			Language:    lang,
-			CreatedBy:   user.ID,
+			Name:           name,
+			Description:    desc,
+			RepoURL:        repoURL,
+			RepoBranch:     branch,
+			Language:       lang,
+			RepoExternalID: strings.TrimSpace(req.RepoExternalID),
+			RepoFullName:   strings.TrimSpace(req.RepoFullName),
+			CreatedBy:      user.ID,
+		}
+		if raw := strings.TrimSpace(req.VcsConnectionID); raw != "" {
+			connID, err := validateUUID(raw)
+			if err != nil {
+				c.JSON(400, gin.H{"error": "invalid vcs_connection_id"})
+				return
+			}
+			var conn models.VcsConnection
+			if err := db.Where("id = ? AND created_by = ?", connID, user.ID).First(&conn).Error; err != nil {
+				c.JSON(400, gin.H{"error": "vcs connection not found"})
+				return
+			}
+			project.VcsConnectionID = &connID
 		}
 		if err := db.Create(&project).Error; err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -325,7 +371,7 @@ type scanRequest struct {
 	Tools     string `json:"tools"`
 }
 
-func createScan(db *gorm.DB) gin.HandlerFunc {
+func createScan(db *gorm.DB, queue *queueService, vcs *vcsService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req scanRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -363,7 +409,39 @@ func createScan(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		// TODO: Queue scan job for worker
+
+		job := ScanJob{
+			ScanID:     scan.ID.String(),
+			ProjectID:  project.ID.String(),
+			RepoURL:    project.RepoURL,
+			RepoBranch: project.RepoBranch,
+			Tools:      tools,
+			Strategy:   strategy,
+		}
+		if project.VcsConnectionID != nil {
+			var conn models.VcsConnection
+			if err := db.Where("id = ?", *project.VcsConnectionID).First(&conn).Error; err == nil {
+				user, pass, mErr := vcs.MintCloneCreds(&conn)
+				if mErr != nil {
+					log.Printf("mint clone creds for scan %s: %v", scan.ID, mErr)
+				} else {
+					job.CloneUsername = user
+					job.ClonePassword = pass
+				}
+			}
+		}
+		if queue == nil {
+			log.Printf("scan %s created but Redis queue is unavailable", scan.ID)
+		} else if err := queue.EnqueueScan(job); err != nil {
+			log.Printf("failed to enqueue scan %s: %v", scan.ID, err)
+			c.JSON(201, gin.H{
+				"id":      scan.ID,
+				"status":  scan.Status,
+				"warning": "scan created but failed to enqueue: " + err.Error(),
+				"scan":    scan,
+			})
+			return
+		}
 		c.JSON(201, scan)
 	}
 }

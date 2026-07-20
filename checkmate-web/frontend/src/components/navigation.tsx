@@ -25,6 +25,7 @@ export function Navigation() {
     { href: "/projects", label: "Projects" },
     { href: "/findings", label: "Findings" },
     { href: "/scans", label: "Scans" },
+    { href: "/integrations/github", label: "Integrations" },
   ]
 
   return (

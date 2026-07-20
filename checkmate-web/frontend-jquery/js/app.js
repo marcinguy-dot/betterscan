@@ -118,6 +118,7 @@
       '      <ul class="navbar-nav me-auto">' +
       navLink("index.html", "Dashboard", activePage === "dashboard") +
       navLink("projects.html", "Projects", activePage === "projects") +
+      navLink("integrations.html", "Integrations", activePage === "integrations") +
       "      </ul>" +
       '      <div class="d-flex align-items-center gap-2">' +
       '        <span class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center" style="width:32px;height:32px;font-size:0.85rem;">' +

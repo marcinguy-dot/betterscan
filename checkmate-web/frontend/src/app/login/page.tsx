@@ -66,6 +66,7 @@ function LoginForm() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                data-testid="login-email"
                 type="email"
                 autoComplete="email"
                 required
@@ -77,6 +78,7 @@ function LoginForm() {
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                data-testid="login-password"
                 type="password"
                 autoComplete="current-password"
                 required
@@ -86,7 +88,7 @@ function LoginForm() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-3">
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading} data-testid="login-submit">
               {loading ? "Signing in..." : "Sign in"}
             </Button>
             <p className="text-sm text-gray-500">

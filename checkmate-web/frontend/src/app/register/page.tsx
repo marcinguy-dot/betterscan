@@ -99,6 +99,7 @@ export default function RegisterPage() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
+                data-testid="register-email"
                 type="email"
                 autoComplete="email"
                 required
@@ -110,6 +111,7 @@ export default function RegisterPage() {
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                data-testid="register-password"
                 type="password"
                 autoComplete="new-password"
                 required
@@ -123,7 +125,7 @@ export default function RegisterPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-3">
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full" disabled={loading} data-testid="register-submit">
               {loading ? "Creating account..." : "Create account"}
             </Button>
             <p className="text-sm text-gray-500">

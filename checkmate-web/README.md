@@ -16,15 +16,30 @@ checkmate-web/
 
 ## Features
 
-- **Authentication**: SSO via OAuth2/OIDC (Google, GitHub, Gluu)
+- **Authentication**: Local email/password JWT; optional SSO via OAuth2/OIDC (Google, GitHub, Gluu)
+- **VCS integrations**: GitHub App install (permissions + repo picker), plus PAT/token connections for **GitLab, Bitbucket, GitHub, and generic HTTPS git** — one worker clone path with ephemeral credentials
 - **Dashboard**: Scan history, vulnerability trends, statistics
-- **Project Management**: Add/remove projects, configure rules
-- **Scan Execution**: Trigger scans with configurable tools and strategies
+- **Project Management**: Add/remove projects (manual URL or from a connection)
+- **Scan Execution**: Queue scans to Redis; worker clones (authenticated when needed) and runs go-checkmate
 - **Vulnerability Tracking**: Track findings by severity (Critical, High, Medium, Low)
 - **False Positive Management**: Mark and suppress findings
-- **Real-time Updates**: WebSocket support for scan progress
 - **API Integration**: RESTful API for automation
+- **Browser e2e**: Playwright click-through suite under `e2e/`
 - **Multi-cloud Deployment**: Support for AWS ECS, Google Cloud Run, Azure Container Apps
+
+## VCS: GitHub App vs GitLab / Bitbucket / other
+
+All private clones use the same model: store a **connection** (encrypted secret), mint credentials when enqueueing a scan, worker rewrites `https://user:pass@host/...`.
+
+| Provider | How to connect | Clone username |
+|----------|----------------|----------------|
+| **GitHub App** (preferred for GitHub) | Integrations → Install App (or `GITHUB_APP_MOCK=1`) | `x-access-token` + installation token |
+| **GitHub PAT** | Integrations → Token form | `x-access-token` |
+| **GitLab** (SaaS or self-hosted) | PAT / project access token + host | `oauth2` |
+| **Bitbucket Cloud** | Access token / app password | `x-token-auth` |
+| **Generic** | Host + token | `git` (configurable) |
+
+GitHub App env: `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY` (or `_PATH`), callback `CHECKMATE_PUBLIC_URL/api/v1/vcs/github/callback`. Local default: `GITHUB_APP_MOCK=1`.
 
 ## Tech Stack
 

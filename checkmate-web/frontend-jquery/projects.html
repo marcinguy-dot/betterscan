@@ -13,7 +13,7 @@
   <div class="page-container">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h1 class="h3 fw-bold mb-0">Projects</h1>
-      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#projectModal">Add Project</button>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#projectModal" data-testid="add-project-btn">Add Project</button>
     </div>
 
     <div id="loading" class="text-muted">Loading...</div>
@@ -40,7 +40,7 @@
           <form id="projectForm">
             <div class="mb-3">
               <label class="form-label" for="name">Project Name</label>
-              <input class="form-control" id="name" />
+              <input class="form-control" id="name" data-testid="project-name" />
             </div>
             <div class="mb-3">
               <label class="form-label" for="description">Description</label>
@@ -48,17 +48,17 @@
             </div>
             <div class="mb-3">
               <label class="form-label" for="repo_url">Repository URL</label>
-              <input class="form-control" id="repo_url" placeholder="https://github.com/user/repo" />
+              <input class="form-control" id="repo_url" data-testid="project-repo-url" placeholder="https://github.com/user/repo" />
             </div>
             <div class="mb-3">
               <label class="form-label" for="repo_branch">Branch</label>
-              <input class="form-control" id="repo_branch" value="main" />
+              <input class="form-control" id="repo_branch" data-testid="project-branch" value="main" />
             </div>
             <div class="mb-3">
               <label class="form-label" for="language">Language</label>
               <input class="form-control" id="language" placeholder="go, python, java, etc." />
             </div>
-            <button type="submit" id="createBtn" class="btn btn-primary w-100">Create Project</button>
+            <button type="submit" id="createBtn" class="btn btn-primary w-100" data-testid="project-create-btn">Create Project</button>
           </form>
         </div>
       </div>
@@ -125,12 +125,30 @@
             "    </div>" +
             '    <div class="text-muted small text-truncate">' + Checkmate.esc(p.repo_url) + "</div>" +
             '    <div class="text-muted" style="font-size:0.75rem;">Added ' + Checkmate.esc(new Date(p.created_at).toLocaleDateString()) + "</div>" +
-            '    <button class="btn btn-outline-secondary w-100 mt-3">View Scans</button>' +
+            '    <div class="d-flex gap-2 mt-3">' +
+            '      <button class="btn btn-outline-secondary flex-fill">View Scans</button>' +
+            '      <button class="btn btn-primary flex-fill scan-now" data-id="' + Checkmate.esc(p.id) + '" data-testid="scan-now-' + Checkmate.esc(p.id) + '">Scan Now</button>' +
+            "    </div>" +
             "  </div></div>" +
             "</div>";
           $grid.append(card);
         });
       }
+
+      $("#projectGrid").on("click", ".scan-now", function () {
+        var id = $(this).data("id");
+        var $btn = $(this).prop("disabled", true).text("Scanning...");
+        Checkmate.api("/api/v1/scans", {
+          method: "POST",
+          body: { project_id: id, strategy: "parallel", tools: "opengrep,trivy" },
+        })
+          .fail(function (xhr) {
+            alert(Checkmate.errorMessage(xhr, "Failed to start scan"));
+          })
+          .always(function () {
+            $btn.prop("disabled", false).text("Scan Now");
+          });
+      });
 
       function load() {
         Checkmate.api("/api/v1/projects").done(renderProjects);

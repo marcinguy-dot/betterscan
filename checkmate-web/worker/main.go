@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -20,12 +22,14 @@ import (
 )
 
 type ScanJob struct {
-	ScanID     string `json:"scan_id"`
-	ProjectID  string `json:"project_id"`
-	RepoURL    string `json:"repo_url"`
-	RepoBranch string `json:"repo_branch"`
-	Tools      string `json:"tools"`
-	Strategy   string `json:"strategy"`
+	ScanID        string `json:"scan_id"`
+	ProjectID     string `json:"project_id"`
+	RepoURL       string `json:"repo_url"`
+	RepoBranch    string `json:"repo_branch"`
+	Tools         string `json:"tools"`
+	Strategy      string `json:"strategy"`
+	CloneUsername string `json:"clone_username,omitempty"`
+	ClonePassword string `json:"clone_password,omitempty"`
 }
 
 func main() {
@@ -108,8 +112,8 @@ func processScanJob(ctx context.Context, db *gorm.DB, rdb *redis.Client, job *Sc
 		return fmt.Errorf("failed to update scan status: %w", err)
 	}
 
-	// Clone repository
-	repoDir, err := cloneRepo(job.RepoURL, job.RepoBranch)
+	// Clone repository (optional HTTPS credentials from VCS adapters)
+	repoDir, err := cloneRepo(job.RepoURL, job.RepoBranch, job.CloneUsername, job.ClonePassword)
 	if err != nil {
 		return updateScanFailed(db, job.ScanID, fmt.Sprintf("Failed to clone repo: %v", err))
 	}
@@ -206,7 +210,7 @@ func processScanJob(ctx context.Context, db *gorm.DB, rdb *redis.Client, job *Sc
 	return nil
 }
 
-func cloneRepo(repoURL, branch string) (string, error) {
+func cloneRepo(repoURL, branch, cloneUser, clonePass string) (string, error) {
 	// Defense-in-depth: re-validate even though the job was validated upstream.
 	validURL, err := validateRepoURL(repoURL)
 	if err != nil {
@@ -217,12 +221,17 @@ func cloneRepo(repoURL, branch string) (string, error) {
 		return "", err
 	}
 
+	cloneURL, err := injectCloneCredentials(validURL, cloneUser, clonePass)
+	if err != nil {
+		return "", err
+	}
+
 	repoDir := filepath.Join(os.TempDir(), fmt.Sprintf("repo-%d", time.Now().UnixNano()))
 
 	// "--" stops the URL from being parsed as an option, and --single-branch
 	// limits the clone to the requested branch.
 	cmd := exec.Command("git", "clone", "--depth", "1", "--single-branch",
-		"--branch", validBranch, "--", validURL, repoDir)
+		"--branch", validBranch, "--", cloneURL, repoDir)
 	// Disable interactive prompts and restrict git to safe transports so a
 	// crafted remote cannot trigger local/ext command execution.
 	cmd.Env = append(os.Environ(),
@@ -230,10 +239,37 @@ func cloneRepo(repoURL, branch string) (string, error) {
 		"GIT_ALLOW_PROTOCOL=http:https:ssh:git",
 	)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("git clone failed: %v\nOutput: %s", err, string(output))
+		// Never echo the credential-bearing URL; redacted message only.
+		return "", fmt.Errorf("git clone failed: %v\nOutput: %s", err, redactSecrets(string(output), clonePass))
 	}
 
 	return repoDir, nil
+}
+
+// injectCloneCredentials rewrites https://host/path to https://user:pass@host/path
+// for GitHub (x-access-token), GitLab (oauth2), Bitbucket (x-token-auth), etc.
+func injectCloneCredentials(repoURL, user, pass string) (string, error) {
+	user = strings.TrimSpace(user)
+	pass = strings.TrimSpace(pass)
+	if user == "" || pass == "" {
+		return repoURL, nil
+	}
+	u, err := url.Parse(repoURL)
+	if err != nil {
+		return "", fmt.Errorf("parse repo url: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", fmt.Errorf("authenticated clone only supports http(s) remotes")
+	}
+	u.User = url.UserPassword(user, pass)
+	return u.String(), nil
+}
+
+func redactSecrets(s, secret string) string {
+	if secret == "" {
+		return s
+	}
+	return strings.ReplaceAll(s, secret, "***")
 }
 
 func updateScanFailed(db *gorm.DB, scanID, reason string) error {
