@@ -24,7 +24,8 @@ const (
 	cpgGroupID       = "de.fraunhofer.aisec"
 	cpgArtifactID    = "cpg-core"
 	minJavaVersion   = 17
-	cpgRunnerPackage = "checkmate.cpg.Runner"
+	// Must match package + class in cpg/src/main/java/.../Runner.java
+	cpgRunnerPackage = "com.checkmate.security.Runner"
 )
 
 var cpgRunnerSource = filepath.Join("cpg", "src", "main", "java", "com", "checkmate", "security", "Runner.java")
@@ -383,8 +384,34 @@ func ensureCpgRuntime(context Context, java javaRuntime) (string, string, error)
 	libDir := filepath.Join(home, "lib")
 	runnerClass := filepath.Join(home, "runner", strings.ReplaceAll(cpgRunnerPackage, ".", string(os.PathSeparator))+".class")
 
+	jarsReady := false
+	if entries, err := os.ReadDir(libDir); err == nil && len(entries) > 0 {
+		jarsReady = true
+	}
+	classReady := false
 	if _, err := os.Stat(runnerClass); err == nil {
-		if entries, err := os.ReadDir(libDir); err == nil && len(entries) > 0 {
+		classReady = true
+	}
+
+	// Recompile runner when source is newer than the class (e.g. after detection fixes).
+	if jarsReady {
+		if src, srcErr := cpgRunnerSourcePath(); srcErr == nil {
+			if needRecompileCpgRunner(src, runnerClass) {
+				if note, compileErr := compileCpgRunner(java, home, src); compileErr == nil {
+					return home, note, nil
+				} else if !classReady {
+					// Fall through to full install if we have no usable class.
+					if !context.InstallMissing {
+						return "", "", compileErr
+					}
+				} else {
+					// Keep existing class if recompile failed but something is present.
+					return home, "", nil
+				}
+			} else if classReady {
+				return home, "", nil
+			}
+		} else if classReady {
 			return home, "", nil
 		}
 	}
@@ -399,6 +426,11 @@ func ensureCpgRuntime(context Context, java javaRuntime) (string, string, error)
 	// Recheck after lock
 	if _, err := os.Stat(runnerClass); err == nil {
 		if entries, err := os.ReadDir(libDir); err == nil && len(entries) > 0 {
+			if src, srcErr := cpgRunnerSourcePath(); srcErr == nil && needRecompileCpgRunner(src, runnerClass) {
+				if note, compileErr := compileCpgRunner(java, home, src); compileErr == nil {
+					return home, note, nil
+				}
+			}
 			return home, "", nil
 		}
 	}
@@ -408,6 +440,62 @@ func ensureCpgRuntime(context Context, java javaRuntime) (string, string, error)
 		return "", "", err
 	}
 	return home, note, nil
+}
+
+func needRecompileCpgRunner(sourcePath, runnerClass string) bool {
+	srcInfo, err := os.Stat(sourcePath)
+	if err != nil {
+		return false
+	}
+	classInfo, err := os.Stat(runnerClass)
+	if err != nil {
+		return true
+	}
+	return srcInfo.ModTime().After(classInfo.ModTime())
+}
+
+func compileCpgRunner(java javaRuntime, home, sourcePath string) (string, error) {
+	libDir := filepath.Join(home, "lib")
+	runnerDir := filepath.Join(home, "runner")
+	if err := os.MkdirAll(runnerDir, 0o755); err != nil {
+		return "", err
+	}
+
+	javacBin := filepath.Join(java.JavaHome, "bin", javacBinaryName())
+	if java.JavaHome == "" {
+		if path, err := exec.LookPath("javac"); err == nil {
+			javacBin = path
+		} else {
+			return "", errors.New("javac not found; a full JDK (not just JRE) is required to compile the CPG runner")
+		}
+	} else if _, err := os.Stat(javacBin); err != nil {
+		return "", fmt.Errorf("javac not found at %s; a full JDK is required for Fraunhofer CPG", javacBin)
+	}
+
+	entries, err := os.ReadDir(libDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to read lib directory: %w", err)
+	}
+	var classpathEntries []string
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".jar") {
+			classpathEntries = append(classpathEntries, filepath.Join(libDir, entry.Name()))
+		}
+	}
+	if len(classpathEntries) == 0 {
+		return "", errors.New("no JAR files found in lib directory")
+	}
+	classpath := strings.Join(classpathEntries, string(os.PathListSeparator))
+	compileCmd := exec.Command(javacBin, "-proc:none", "-cp", classpath, "-d", runnerDir, sourcePath)
+	compileOutput, err := compileCmd.CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(compileOutput))
+		if msg == "" {
+			msg = err.Error()
+		}
+		return "", fmt.Errorf("failed to compile CPG runner: %s", msg)
+	}
+	return "recompiled Fraunhofer CPG runner", nil
 }
 
 func installCpg(java javaRuntime) (string, error) {
@@ -432,45 +520,13 @@ func installCpg(java javaRuntime) (string, error) {
 		}
 	}
 
-	javacBin := filepath.Join(java.JavaHome, "bin", javacBinaryName())
-	if java.JavaHome == "" {
-		if path, err := exec.LookPath("javac"); err == nil {
-			javacBin = path
-		} else {
-			return "", errors.New("javac not found; a full JDK (not just JRE) is required to compile the CPG runner")
-		}
-	} else if _, err := os.Stat(javacBin); err != nil {
-		return "", fmt.Errorf("javac not found at %s; a full JDK is required for Fraunhofer CPG", javacBin)
-	}
-
 	sourcePath, err := cpgRunnerSourcePath()
 	if err != nil {
 		return "", err
 	}
 
-	// Build classpath with all JAR files in libDir
-	entries, err := os.ReadDir(libDir)
-	if err != nil {
-		return "", fmt.Errorf("failed to read lib directory: %w", err)
-	}
-	var classpathEntries []string
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".jar") {
-			classpathEntries = append(classpathEntries, filepath.Join(libDir, entry.Name()))
-		}
-	}
-	if len(classpathEntries) == 0 {
-		return "", errors.New("no JAR files found in lib directory")
-	}
-	classpath := strings.Join(classpathEntries, string(os.PathListSeparator))
-	compileCmd := exec.Command(javacBin, "-cp", classpath, "-d", runnerDir, sourcePath)
-	compileOutput, err := compileCmd.CombinedOutput()
-	if err != nil {
-		msg := strings.TrimSpace(string(compileOutput))
-		if msg == "" {
-			msg = err.Error()
-		}
-		return "", fmt.Errorf("failed to compile CPG runner: %s", msg)
+	if _, err := compileCpgRunner(java, home, sourcePath); err != nil {
+		return "", err
 	}
 
 	return fmt.Sprintf("installed Fraunhofer CPG %s and compiled runner", cpgVersion), nil

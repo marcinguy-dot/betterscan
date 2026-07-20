@@ -47,6 +47,22 @@ func TestCpgHomeDir(t *testing.T) {
 	}
 }
 
+func TestCpgRunnerPackage(t *testing.T) {
+	if cpgRunnerPackage != "com.checkmate.security.Runner" {
+		t.Fatalf("cpgRunnerPackage = %q, want com.checkmate.security.Runner", cpgRunnerPackage)
+	}
+	// Ensure class path layout matches Java package.
+	wantSuffix := filepath.Join("com", "checkmate", "security", "Runner.class")
+	got := filepath.Join(strings.Split(cpgRunnerPackage, ".")...) + ".class"
+	if got != wantSuffix && filepath.FromSlash(strings.ReplaceAll(cpgRunnerPackage, ".", "/")+".class") != wantSuffix {
+		// Normalize for OS separators
+		normalized := filepath.Join(strings.Split(cpgRunnerPackage, ".")...) + ".class"
+		if normalized != wantSuffix {
+			t.Fatalf("class path layout %q does not match %q", normalized, wantSuffix)
+		}
+	}
+}
+
 func TestBundledJavaHomeDir(t *testing.T) {
 	home, err := os.UserHomeDir()
 	if err != nil {

@@ -855,6 +855,19 @@ func isRailsApp(codeDir string) (bool, error) {
 }
 
 func parseToolOutput(tool Tool, stdout []byte, stderr []byte) []Issue {
+	// Joern emits plain-text "Result:" lines (not JSON). Parse before the
+	// empty-JSON short-circuit so stderr-only output is still handled.
+	if tool.Kind == ToolJoern {
+		return parseJoernScan(stdout, stderr, tool.Name)
+	}
+	if tool.Kind == ToolCpg {
+		payload := cpgJSONFromMixedOutput(stdout, stderr)
+		if len(payload) == 0 {
+			return nil
+		}
+		return parseCpg(payload, tool.Name)
+	}
+
 	output := selectJSONPayload(stdout, stderr)
 	if len(output) == 0 {
 		return nil
@@ -870,14 +883,6 @@ func parseToolOutput(tool Tool, stdout []byte, stderr []byte) []Issue {
 		return parseBrakeman(output, tool.Name)
 	case ToolStaticcheck:
 		return parseStaticcheck(output, tool.Name)
-	case ToolCpg:
-		payload := cpgJSONFromMixedOutput(stdout, stderr)
-		if len(payload) == 0 {
-			payload = output
-		}
-		return parseCpg(payload, tool.Name)
-	case ToolJoern:
-		return parseJoernScan(stdout, stderr, tool.Name)
 	default:
 		return nil
 	}
@@ -1476,17 +1481,27 @@ func installJoernScan(context Context) (string, error) {
 }
 
 func parseJoernScan(stdout []byte, stderr []byte, analyzer string) []Issue {
-	lines := bytes.Split(stdout, []byte("\n"))
+	// Prefer stdout; also scan stderr because joern-scan sometimes logs findings there.
+	combined := append(append([]byte{}, stdout...), '\n')
+	combined = append(combined, stderr...)
+	lines := bytes.Split(combined, []byte("\n"))
 	var issues []Issue
+	seen := make(map[string]struct{})
 	for _, lineBytes := range lines {
 		line := strings.TrimSpace(string(lineBytes))
 		if !strings.HasPrefix(line, "Result:") {
 			continue
 		}
 		issue := parseJoernLine(line, analyzer)
-		if issue != nil {
-			issues = append(issues, *issue)
+		if issue == nil {
+			continue
 		}
+		key := issue.Fingerprint
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		issues = append(issues, *issue)
 	}
 	return issues
 }
