@@ -2,20 +2,25 @@
 
 This repository contains the Go implementation of Checkmate:
 
-- `go-checkmate/` – Go runner
+- `go-checkmate/` – Go CLI runner (OpenGrep, Trivy, Bandit, Brakeman, staticcheck, Joern, Fraunhofer CPG)
+- `checkmate-web/` – Self-hosted platform (API, worker, Next.js + jQuery UIs, Redis scan queue, VCS integrations)
+- `fixtures/vulnerable/` – Small multi-language samples for CLI smoke tests
 - `deploy/cloud-run-jobs/go-checkmate/` – Cloud Run Jobs templates (run N tasks)
 - `deploy/ecs-fargate/go-checkmate/` – ECS/Fargate templates (run N tasks)
 - `broken-vulnerable-code-snippets/` – Vulnerable code dataset (cloned from https://github.com/snoopysecurity/Broken-Vulnerable-Code-Snippets)
 - `Speed.md` – Benchmark results
 
-For usage and setup, see `go-checkmate/README.md`.
+For CLI usage, see `go-checkmate/README.md`. For the web stack, see `checkmate-web/README.md`.
 
 **Graph engines:** Checkmate runs **Joern** for mature, excellent default vulnerability queries, and **Fraunhofer CPG** primarily for **new custom rules** and **project-specific enforcement** on a multi-language code property graph (library / extensible analyses—aligned with Fraunhofer’s platform framing and tools such as Codyze). Details: [go-checkmate/README.md § Graph engines](go-checkmate/README.md#graph-engines-joern-vs-fraunhofer-cpg).
+
+**Web VCS access:** Projects can link a **GitHub App** install (permissions + repo picker) or a **PAT/token** for GitLab, Bitbucket, GitHub, or generic HTTPS remotes. Scans are enqueued on Redis; the worker clones with short-lived credentials. Details: [checkmate-web/README.md § VCS](checkmate-web/README.md#vcs-github-app-vs-gitlab--bitbucket--other).
 
 ## Web Platform Frontends: Next.js vs jQuery
 
 `checkmate-web/` provides a web UI for the platform with **two interchangeable
-frontends** (same Go backend, same local email+password / JWT auth). Both are
+frontends** (same Go backend, same local email+password / JWT auth, same
+Integrations + Projects + Scan Now flows). Both are
 included on `main` and run side by side, so you can compare the look & feel and
 choose one:
 

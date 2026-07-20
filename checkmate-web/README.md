@@ -6,12 +6,14 @@ A modern web interface for the Checkmate code scanning platform with SSO authent
 
 ```
 checkmate-web/
-├── frontend/          # Next.js 14 + TypeScript + shadcn/ui
-├── backend/           # Go API server with Gin
-├── worker/            # Go scan worker service
-├── docker-compose.yml # Local development
+├── frontend/          # Next.js App Router + TypeScript + shadcn/ui (:3000)
+├── frontend-jquery/   # Zero-build jQuery + Bootstrap UI (:8081)
+├── backend/           # Go API (Gin): auth, projects, scans, VCS integrations
+├── worker/            # Redis consumer: clone (auth optional) + go-checkmate
+├── e2e/               # Playwright click-through tests (Next + jQuery)
+├── docker-compose.yml # Postgres, Redis, API, worker, both frontends
 ├── DEPLOYMENT.md      # Deployment guide
-└── .env.example       # Environment variables template
+└── .env.example       # JWT, VCS, GitHub App, CORS, etc.
 ```
 
 ## Features
@@ -91,10 +93,24 @@ docker-compose down
 ```
 
 Access:
-- **Frontend**: http://localhost:3000
+- **Next.js frontend**: http://localhost:3000
+- **jQuery frontend**: http://localhost:8081
 - **Backend API**: http://localhost:8080
 - **PostgreSQL**: localhost:5432
 - **Redis**: localhost:6379
+
+### Browser e2e (Playwright)
+
+With the stack running:
+
+```bash
+cd e2e
+npm install
+npx playwright install chromium
+npm test
+```
+
+Specs cover register/login, projects, and mock GitHub App install (when `GITHUB_APP_MOCK=1`).
 
 ### Manual Development
 
@@ -123,59 +139,50 @@ go run main.go
 
 ## API Endpoints
 
-### Authentication
-- `GET /api/v1/auth/login` - Initiate OAuth login
-- `GET /api/v1/auth/callback` - OAuth callback
-- `GET /api/v1/auth/logout` - Logout
+### Authentication (local JWT)
+- `POST /api/v1/auth/register` - Create account (email + password)
+- `POST /api/v1/auth/login` - Login → `{ token, user }`
+- `GET /api/v1/auth/me` - Current user (Bearer)
+- `POST /api/v1/auth/logout` - Logout
 
-### Projects
-- `GET /api/v1/projects` - List all projects
-- `POST /api/v1/projects` - Create project
-- `GET /api/v1/projects/:id` - Get project details
-- `PUT /api/v1/projects/:id` - Update project
-- `DELETE /api/v1/projects/:id` - Delete project
+### VCS integrations (Bearer)
+- `GET /api/v1/vcs/providers` - Which providers are configured / mock
+- `GET|POST /api/v1/vcs/connections` - List / create PAT connections
+- `DELETE /api/v1/vcs/connections/:id` - Disconnect
+- `GET /api/v1/vcs/connections/:id/repos` - List remote repos
+- `GET /api/v1/vcs/github/install-url` - GitHub App install URL (or mock)
+- `POST /api/v1/vcs/github/finalize` - Persist installation after redirect
+- `GET /api/v1/vcs/github/callback` - Browser callback from GitHub
+- `POST /api/v1/vcs/github/webhooks` - App webhook stub
 
-### Scans
-- `GET /api/v1/scans` - List scans (filter by project_id)
-- `POST /api/v1/scans` - Create new scan
-- `GET /api/v1/scans/:id` - Get scan details
-- `GET /api/v1/scans/:id/findings` - Get scan findings
-
-### Findings
-- `GET /api/v1/findings` - List findings (filter by severity, project)
-- `PUT /api/v1/findings/:id/false-positive` - Mark as false positive
-
-### Schedules
-- `GET /api/v1/schedules` - List schedules
-- `POST /api/v1/schedules` - Create schedule
-- `PUT /api/v1/schedules/:id` - Update schedule
-- `DELETE /api/v1/schedules/:id` - Delete schedule
-
-### Dashboard
-- `GET /api/v1/dashboard/stats` - Get dashboard statistics
-- `GET /api/v1/dashboard/trends` - Get vulnerability trends
+### Projects / scans / findings
+- `GET|POST /api/v1/projects`, `GET|PUT|DELETE /api/v1/projects/:id`
+- `GET|POST /api/v1/scans` — **POST enqueues Redis job** for the worker
+- `GET /api/v1/scans/:id`, `GET /api/v1/scans/:id/findings`
+- `GET /api/v1/findings`, `PUT /api/v1/findings/:id/false-positive`
+- `GET|POST /api/v1/schedules`, `PUT|DELETE /api/v1/schedules/:id`
+- `GET /api/v1/dashboard/stats`, `GET /api/v1/dashboard/trends`
+- `GET /api/v1/health` — public
 
 ## Environment Variables
 
-See `.env.example` for required environment variables:
+See `.env.example` for the full list. Important groups:
 
-### Database
-- `DATABASE_URL` - PostgreSQL connection string
+### Core
+- `DATABASE_URL`, `REDIS_ADDR`, `PORT`, `JWT_SECRET`, `CORS_ORIGINS`
 
-### Redis
-- `REDIS_ADDR` - Redis server address
-- `REDIS_PASSWORD` - Redis password (optional)
+### VCS / GitHub App
+- `VCS_SECRET_KEY` — encrypt PATs at rest
+- `GITHUB_APP_MOCK=1` — local/e2e without a real App
+- `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY` (or `_PATH`)
+- `GITHUB_APP_CLIENT_ID` / `SECRET`, `GITHUB_APP_WEBHOOK_SECRET`
+- `CHECKMATE_PUBLIC_URL`, `CHECKMATE_UI_URL` — callback and post-install redirects
 
-### Backend
-- `PORT` - Backend port (default: 8080)
-- `JWT_SECRET` - JWT signing secret
-
-### OAuth2
-- `GOOGLE_CLIENT_ID` - Google OAuth client ID
-- `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
-- `GITHUB_CLIENT_ID` - GitHub OAuth client ID
-- `GITHUB_CLIENT_SECRET` - GitHub OAuth client secret
-- `GLUU_ISSUER` - Gluu server issuer URL (must match `/.well-known/openid-configuration`)
+### Frontends (NextAuth / optional SSO)
+- `NEXT_PUBLIC_API_URL`, `INTERNAL_API_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`
+- `GOOGLE_CLIENT_ID` / `SECRET` — Google OAuth client ID
+- `GITHUB_CLIENT_ID` / `SECRET` — GitHub **OAuth login** (identity only; not App install)
+- `GLUU_ISSUER` — Gluu server issuer URL (must match `/.well-known/openid-configuration`)
 - `GLUU_CLIENT_ID` - Gluu OAuth client ID
 - `GLUU_CLIENT_SECRET` - Gluu OAuth client secret
 - `NEXT_PUBLIC_GLUU_ENABLED` - Set to `true` to show the Gluu sign-in button
