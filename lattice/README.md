@@ -3,6 +3,10 @@
 Go-based scanner runner with sequential/parallel execution, normalized findings,
 and optional LLM enrichment for JSON/SARIF/HTML outputs.
 
+Lattice is the new generation of the **Contender** project (Betterscan), presented at
+**Black Hat MEA 2025** in Saudi Arabia—rebuilt around multi-engine orchestration and
+code property graphs.
+
 ## Features
 - Runs common Lattice tools (OpenGrep, Trivy, Bandit, Brakeman, GoStaticcheck, Joern, Fraunhofer CPG)
 - Two strategies:

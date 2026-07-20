@@ -34,3 +34,7 @@ The Codeberg remote may still be named `checkmate-go` until renamed on the host.
 ## Why “Lattice”
 
 A lattice is a structured network of nodes and edges—the same idea as a **code property graph**. Lattice unifies many scanners and graph engines into one connected view of the codebase.
+
+## Heritage
+
+Lattice is the new generation of the **Contender** project (Betterscan), presented at **Black Hat MEA 2025** in **Saudi Arabia**.

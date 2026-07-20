@@ -2,6 +2,9 @@
 
 A modern web interface for the Lattice code scanning platform with SSO authentication, dashboard, and vulnerability management.
 
+Lattice continues the **Contender** / **Betterscan** line shown at **Black Hat MEA 2025**
+(Saudi Arabia) as a self-hosted, multi-engine scanning platform.
+
 ## Architecture
 
 ```

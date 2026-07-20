@@ -2,6 +2,8 @@
 
 Deep code security scanning — graph-aware CLI and self-hosted web platform.
 
+**Lineage:** Lattice is the **new generation** of the **Contender** project (Betterscan), shown at **Black Hat MEA 2025** in **Saudi Arabia** (Riyadh). Same mission—serious multi-engine code security—rebuilt for graph-aware analysis (Joern / Fraunhofer CPG), a modern Go runner, and a full self-hosted web platform.
+
 This monorepo contains:
 
 - `lattice/` – Go CLI runner (OpenGrep, Trivy, Bandit, Brakeman, staticcheck, Joern, Fraunhofer CPG)
