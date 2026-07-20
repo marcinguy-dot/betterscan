@@ -1,24 +1,26 @@
-# Checkmate5 Monorepo
+# Lattice
 
-This repository contains the Go implementation of Checkmate:
+Deep code security scanning — graph-aware CLI and self-hosted web platform.
 
-- `go-checkmate/` – Go CLI runner (OpenGrep, Trivy, Bandit, Brakeman, staticcheck, Joern, Fraunhofer CPG)
-- `checkmate-web/` – Self-hosted platform (API, worker, Next.js + jQuery UIs, Redis scan queue, VCS integrations)
+This monorepo contains:
+
+- `lattice/` – Go CLI runner (OpenGrep, Trivy, Bandit, Brakeman, staticcheck, Joern, Fraunhofer CPG)
+- `lattice-web/` – Self-hosted platform (API, worker, Next.js + jQuery UIs, Redis scan queue, VCS integrations)
 - `fixtures/vulnerable/` – Small multi-language samples for CLI smoke tests
-- `deploy/cloud-run-jobs/go-checkmate/` – Cloud Run Jobs templates (run N tasks)
-- `deploy/ecs-fargate/go-checkmate/` – ECS/Fargate templates (run N tasks)
+- `deploy/cloud-run-jobs/lattice/` – Cloud Run Jobs templates (run N tasks)
+- `deploy/ecs-fargate/lattice/` – ECS/Fargate templates (run N tasks)
 - `broken-vulnerable-code-snippets/` – Vulnerable code dataset (cloned from https://github.com/snoopysecurity/Broken-Vulnerable-Code-Snippets)
 - `Speed.md` – Benchmark results
 
-For CLI usage, see `go-checkmate/README.md`. For the web stack, see `checkmate-web/README.md`.
+For CLI usage, see `lattice/README.md`. For the web stack, see `lattice-web/README.md`.
 
-**Graph engines:** Checkmate runs **Joern** for mature, excellent default vulnerability queries, and **Fraunhofer CPG** primarily for **new custom rules** and **project-specific enforcement** on a multi-language code property graph (library / extensible analyses—aligned with Fraunhofer’s platform framing and tools such as Codyze). Details: [go-checkmate/README.md § Graph engines](go-checkmate/README.md#graph-engines-joern-vs-fraunhofer-cpg).
+**Graph engines:** Lattice runs **Joern** for mature, excellent default vulnerability queries, and **Fraunhofer CPG** primarily for **new custom rules** and **project-specific enforcement** on a multi-language code property graph (library / extensible analyses—aligned with Fraunhofer’s platform framing and tools such as Codyze). Details: [lattice/README.md § Graph engines](lattice/README.md#graph-engines-joern-vs-fraunhofer-cpg).
 
-**Web VCS access:** Projects can link a **GitHub App** install (permissions + repo picker) or a **PAT/token** for GitLab, Bitbucket, GitHub, or generic HTTPS remotes. Scans are enqueued on Redis; the worker clones with short-lived credentials. Details: [checkmate-web/README.md § VCS](checkmate-web/README.md#vcs-github-app-vs-gitlab--bitbucket--other).
+**Web VCS access:** Projects can link a **GitHub App** install (permissions + repo picker) or a **PAT/token** for GitLab, Bitbucket, GitHub, or generic HTTPS remotes. Scans are enqueued on Redis; the worker clones with short-lived credentials. Details: [lattice-web/README.md § VCS](lattice-web/README.md#vcs-github-app-vs-gitlab--bitbucket--other).
 
 ## Web Platform Frontends: Next.js vs jQuery
 
-`checkmate-web/` provides a web UI for the platform with **two interchangeable
+`lattice-web/` provides a web UI for the platform with **two interchangeable
 frontends** (same Go backend, same local email+password / JWT auth, same
 Integrations + Projects + Scan Now flows). Both are
 included on `main` and run side by side, so you can compare the look & feel and
@@ -30,21 +32,21 @@ choose one:
 | jQuery  | jQuery 3.7 + Bootstrap 5 + Chart.js (zero-build) | http://localhost:8081 |
 
 ```bash
-cd checkmate-web && docker compose up      # then open :3000 and/or :8081
+cd lattice-web && docker compose up      # then open :3000 and/or :8081
 ```
 
 ### Preview the look & feel before installing
 
 Login and dashboard, side by side (full screenshots of every screen are in the
-[comparison doc](checkmate-web/docs/comparison/README.md)):
+[comparison doc](lattice-web/docs/comparison/README.md)):
 
 | | Next.js | jQuery |
 |---|---|---|
-| Login | [![Next.js login](checkmate-web/docs/comparison/screenshots/nextjs/01-login.png)](checkmate-web/docs/comparison/screenshots/nextjs/01-login.png) | [![jQuery login](checkmate-web/docs/comparison/screenshots/jquery/01-login.png)](checkmate-web/docs/comparison/screenshots/jquery/01-login.png) |
-| Dashboard | [![Next.js dashboard](checkmate-web/docs/comparison/screenshots/nextjs/02-dashboard.png)](checkmate-web/docs/comparison/screenshots/nextjs/02-dashboard.png) | [![jQuery dashboard](checkmate-web/docs/comparison/screenshots/jquery/02-dashboard.png)](checkmate-web/docs/comparison/screenshots/jquery/02-dashboard.png) |
+| Login | [![Next.js login](lattice-web/docs/comparison/screenshots/nextjs/01-login.png)](lattice-web/docs/comparison/screenshots/nextjs/01-login.png) | [![jQuery login](lattice-web/docs/comparison/screenshots/jquery/01-login.png)](lattice-web/docs/comparison/screenshots/jquery/01-login.png) |
+| Dashboard | [![Next.js dashboard](lattice-web/docs/comparison/screenshots/nextjs/02-dashboard.png)](lattice-web/docs/comparison/screenshots/nextjs/02-dashboard.png) | [![jQuery dashboard](lattice-web/docs/comparison/screenshots/jquery/02-dashboard.png)](lattice-web/docs/comparison/screenshots/jquery/02-dashboard.png) |
 
 **Full side-by-side comparison (login, dashboard, trends, projects, register):**
-[`checkmate-web/docs/comparison/README.md`](checkmate-web/docs/comparison/README.md)
+[`lattice-web/docs/comparison/README.md`](lattice-web/docs/comparison/README.md)
 
 **Trade-off:** Next.js gives a nicer developer experience and a more modern look
 but needs ongoing maintenance (npm audit churn, build, upgrades); the jQuery
@@ -58,7 +60,7 @@ if you want to deploy only one.
 
 When scanning untrusted source code, container escape vulnerabilities in Docker (e.g. kernel exploits or runtime bugs in `runc`) pose a threat to the host system.
 
-To mitigate this, Checkmate can run the worker component inside **Qubes OS** to isolate untrusted code execution using Xen-based hypervisor-level compartmentalization:
+To mitigate this, Lattice can run the worker component inside **Qubes OS** to isolate untrusted code execution using Xen-based hypervisor-level compartmentalization:
 
 ```mermaid
 graph TD

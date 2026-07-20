@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create account &middot; Lattice</title>
+  <link rel="stylesheet" href="vendor/bootstrap-5.3.3.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="card shadow-sm" style="width:100%;max-width:28rem;">
+      <div class="card-body p-4">
+        <h1 class="h4 text-center mb-1">Create your account</h1>
+        <p class="text-muted text-center small mb-4">Sign up to start scanning your projects</p>
+
+        <div id="error" class="alert alert-danger d-none" role="alert"></div>
+
+        <form id="registerForm">
+          <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" class="form-control" id="name" autocomplete="name" />
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" autocomplete="email" required />
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" autocomplete="new-password" minlength="8" required />
+            <div class="form-text">At least 8 characters.</div>
+          </div>
+          <button type="submit" id="submitBtn" class="btn btn-primary w-100">Create account</button>
+        </form>
+
+        <p class="text-muted small text-center mt-3 mb-0">
+          Already have an account?
+          <a href="login.html">Sign in</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script src="vendor/jquery-3.7.1.min.js"></script>
+  <script src="vendor/bootstrap-5.3.3.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    $(function () {
+      Lattice.redirectIfAuthed();
+
+      function showError(msg) {
+        $("#error").text(msg).removeClass("d-none");
+      }
+
+      $("#registerForm").on("submit", function (e) {
+        e.preventDefault();
+        $("#error").addClass("d-none");
+
+        var email = $("#email").val();
+        var password = $("#password").val();
+        var name = $("#name").val();
+
+        if (password.length < 8) {
+          showError("Password must be at least 8 characters.");
+          return;
+        }
+
+        var btn = $("#submitBtn").prop("disabled", true).text("Creating account...");
+
+        Lattice.api("/api/v1/auth/register", {
+          method: "POST",
+          noRedirect: true,
+          body: { name: name, email: email, password: password },
+        })
+          .done(function () {
+            // Account created; log in to obtain a token.
+            Lattice.api("/api/v1/auth/login", {
+              method: "POST",
+              noRedirect: true,
+              body: { email: email, password: password },
+            })
+              .done(function (data) {
+                Lattice.setSession(data.token, data.user);
+                window.location.href = "index.html";
+              })
+              .fail(function () {
+                window.location.href = "login.html";
+              });
+          })
+          .fail(function (xhr) {
+            showError(Lattice.errorMessage(xhr, "Failed to create account."));
+            btn.prop("disabled", false).text("Create account");
+          });
+      });
+    });
+  </script>
+</body>
+</html>

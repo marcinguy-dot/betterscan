@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Projects &middot; Lattice</title>
+  <link rel="stylesheet" href="vendor/bootstrap-5.3.3.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="page-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="h3 fw-bold mb-0">Projects</h1>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#projectModal" data-testid="add-project-btn">Add Project</button>
+    </div>
+
+    <div id="loading" class="text-muted">Loading...</div>
+
+    <div id="projectGrid" class="row g-4 d-none"></div>
+    <div id="emptyState" class="text-center text-muted py-5 d-none">
+      No projects yet. Add your first project to get started.
+    </div>
+  </div>
+
+  <!-- Add Project Modal -->
+  <div class="modal fade" id="projectModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title">Create New Project</h5>
+            <p class="text-muted small mb-0">Add a new code repository to scan</p>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="formError" class="alert alert-danger d-none" role="alert"></div>
+          <form id="projectForm">
+            <div class="mb-3">
+              <label class="form-label" for="name">Project Name</label>
+              <input class="form-control" id="name" data-testid="project-name" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="description">Description</label>
+              <textarea class="form-control" id="description" rows="2"></textarea>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="repo_url">Repository URL</label>
+              <input class="form-control" id="repo_url" data-testid="project-repo-url" placeholder="https://github.com/user/repo" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="repo_branch">Branch</label>
+              <input class="form-control" id="repo_branch" data-testid="project-branch" value="main" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="language">Language</label>
+              <input class="form-control" id="language" placeholder="go, python, java, etc." />
+            </div>
+            <button type="submit" id="createBtn" class="btn btn-primary w-100" data-testid="project-create-btn">Create Project</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="vendor/jquery-3.7.1.min.js"></script>
+  <script src="vendor/bootstrap-5.3.3.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    $(function () {
+      if (!Lattice.requireAuth()) return;
+      Lattice.renderNav("projects");
+
+      var modal = new bootstrap.Modal(document.getElementById("projectModal"));
+
+      // Mirror the backend allowlist for early feedback; backend stays authoritative.
+      function validate(p) {
+        var name = $.trim(p.name);
+        if (!name) return "Project name is required";
+        if (name.length > 200) return "Project name is too long";
+
+        var repoUrl = $.trim(p.repo_url);
+        if (!repoUrl) return "Repository URL is required";
+        var scpLike = /^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+:.+$/.test(repoUrl);
+        if (!scpLike) {
+          try {
+            var parsed = new URL(repoUrl);
+            var allowed = ["http:", "https:", "ssh:", "git:"];
+            if (allowed.indexOf(parsed.protocol) === -1)
+              return "Repository URL must use http(s), ssh or git";
+          } catch (e) {
+            return "Repository URL is not a valid URL";
+          }
+        }
+
+        var branch = $.trim(p.repo_branch);
+        if (branch && !/^[A-Za-z0-9._/-]+$/.test(branch))
+          return "Branch name contains invalid characters";
+
+        return null;
+      }
+
+      function renderProjects(projects) {
+        var $grid = $("#projectGrid").empty();
+        $("#loading").addClass("d-none");
+        if (!projects || projects.length === 0) {
+          $grid.addClass("d-none");
+          $("#emptyState").removeClass("d-none");
+          return;
+        }
+        $("#emptyState").addClass("d-none");
+        $grid.removeClass("d-none");
+        projects.forEach(function (p) {
+          var card =
+            '<div class="col-12 col-md-6 col-lg-4">' +
+            '  <div class="card h-100"><div class="card-body d-flex flex-column">' +
+            '    <h2 class="h5 mb-1">' + Lattice.esc(p.name) + "</h2>" +
+            '    <p class="text-muted small">' + Lattice.esc(p.description) + "</p>" +
+            '    <div class="mb-2 d-flex gap-2 flex-wrap">' +
+            (p.language ? '<span class="badge text-bg-light border">' + Lattice.esc(p.language) + "</span>" : "") +
+            '      <span class="badge text-bg-light border">' + Lattice.esc(p.repo_branch) + "</span>" +
+            "    </div>" +
+            '    <div class="text-muted small text-truncate">' + Lattice.esc(p.repo_url) + "</div>" +
+            '    <div class="text-muted" style="font-size:0.75rem;">Added ' + Lattice.esc(new Date(p.created_at).toLocaleDateString()) + "</div>" +
+            '    <div class="d-flex gap-2 mt-3">' +
+            '      <button class="btn btn-outline-secondary flex-fill">View Scans</button>' +
+            '      <button class="btn btn-primary flex-fill scan-now" data-id="' + Lattice.esc(p.id) + '" data-testid="scan-now-' + Lattice.esc(p.id) + '">Scan Now</button>' +
+            "    </div>" +
+            "  </div></div>" +
+            "</div>";
+          $grid.append(card);
+        });
+      }
+
+      $("#projectGrid").on("click", ".scan-now", function () {
+        var id = $(this).data("id");
+        var $btn = $(this).prop("disabled", true).text("Scanning...");
+        Lattice.api("/api/v1/scans", {
+          method: "POST",
+          body: { project_id: id, strategy: "parallel", tools: "opengrep,trivy" },
+        })
+          .fail(function (xhr) {
+            alert(Lattice.errorMessage(xhr, "Failed to start scan"));
+          })
+          .always(function () {
+            $btn.prop("disabled", false).text("Scan Now");
+          });
+      });
+
+      function load() {
+        Lattice.api("/api/v1/projects").done(renderProjects);
+      }
+
+      $("#projectForm").on("submit", function (e) {
+        e.preventDefault();
+        $("#formError").addClass("d-none");
+        var project = {
+          name: $("#name").val(),
+          description: $("#description").val(),
+          repo_url: $("#repo_url").val(),
+          repo_branch: $("#repo_branch").val(),
+          language: $("#language").val(),
+        };
+        var err = validate(project);
+        if (err) {
+          $("#formError").text(err).removeClass("d-none");
+          return;
+        }
+        var btn = $("#createBtn").prop("disabled", true).text("Creating...");
+        Lattice.api("/api/v1/projects", { method: "POST", body: project })
+          .done(function () {
+            modal.hide();
+            $("#projectForm")[0].reset();
+            $("#repo_branch").val("main");
+            load();
+          })
+          .fail(function (xhr) {
+            $("#formError")
+              .text(Lattice.errorMessage(xhr, "Failed to create project"))
+              .removeClass("d-none");
+          })
+          .always(function () {
+            btn.prop("disabled", false).text("Create Project");
+          });
+      });
+
+      load();
+    });
+  </script>
+</body>
+</html>

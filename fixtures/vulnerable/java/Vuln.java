@@ -1,5 +1,5 @@
 // CPG targets: null-pointer dereference + out-of-bounds index.
-// Pattern matches go-checkmate CPG Runner (MemberCall on null, negative subscript).
+// Pattern matches lattice CPG Runner (MemberCall on null, negative subscript).
 public class Vuln {
     public int npeCast() {
         return ((String) null).length();

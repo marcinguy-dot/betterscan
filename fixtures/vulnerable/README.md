@@ -1,4 +1,4 @@
-# Vulnerable fixtures for go-checkmate smoke tests
+# Vulnerable fixtures for lattice smoke tests
 
 Hand-written snippets to exercise each scanner plugin:
 
@@ -18,14 +18,14 @@ Hand-written snippets to exercise each scanner plugin:
 ## CLI examples
 
 ```bash
-cd go-checkmate
-./checkmate-go --code-dir ../fixtures/vulnerable --install-missing \
+cd lattice
+./lattice --code-dir ../fixtures/vulnerable --install-missing \
   --tools cpg,trivy,bandit,gostaticcheck,opengrep,joern \
-  --json-out /tmp/checkmate-vuln.json --strategy sequential
+  --json-out /tmp/lattice-vuln.json --strategy sequential
 
 # Deduplication scopes
-./checkmate-go --code-dir ../fixtures/vulnerable --tools cpg,trivy \
+./lattice --code-dir ../fixtures/vulnerable --tools cpg,trivy \
   --dedupe-scope strict --json-out /tmp/strict.json
-./checkmate-go --code-dir ../fixtures/vulnerable --tools cpg,trivy \
+./lattice --code-dir ../fixtures/vulnerable --tools cpg,trivy \
   --dedupe-scope file-line --json-out /tmp/file-line.json
 ```

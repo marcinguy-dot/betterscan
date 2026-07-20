@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lattice-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lattice
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: lattice-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: golang:1.23-alpine
+    container_name: lattice-backend
+    working_dir: /app
+    # Run from the mounted source tree so local auth route changes apply without
+    # rebuilding a stale image binary.
+    command: sh -c "go mod download && go run ."
+    environment:
+      DATABASE_URL: host=postgres user=postgres password=postgres dbname=lattice port=5432 sslmode=disable
+      REDIS_ADDR: redis:6379
+      PORT: 8080
+      # Signs the JWT bearer tokens issued by the backend. Replace with a strong
+      # random value in production (e.g. `openssl rand -hex 32`).
+      JWT_SECRET: ${JWT_SECRET:-dev-change-me-to-a-strong-random-secret}
+      VCS_SECRET_KEY: ${VCS_SECRET_KEY:-dev-vcs-secret-change-me}
+      # GitHub App (install → permissions → private clone). Use mock for local/e2e.
+      GITHUB_APP_MOCK: ${GITHUB_APP_MOCK:-1}
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_SLUG: ${GITHUB_APP_SLUG:-}
+      GITHUB_APP_CLIENT_ID: ${GITHUB_APP_CLIENT_ID:-}
+      GITHUB_APP_CLIENT_SECRET: ${GITHUB_APP_CLIENT_SECRET:-}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+      GITHUB_APP_PRIVATE_KEY_PATH: ${GITHUB_APP_PRIVATE_KEY_PATH:-}
+      GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET:-}
+      LATTICE_PUBLIC_URL: ${LATTICE_PUBLIC_URL:-http://localhost:8080}
+      LATTICE_UI_URL: ${LATTICE_UI_URL:-http://localhost:3000}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: lattice-worker
+    environment:
+      DATABASE_URL: host=postgres user=postgres password=postgres dbname=lattice port=5432 sslmode=disable
+      REDIS_ADDR: redis:6379
+      LATTICE_PATH: /app/lattice/lattice
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./worker:/app
+      - ../lattice:/app/lattice
+      - /tmp/lattice-scans:/tmp/lattice-scans
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: lattice-frontend
+    environment:
+      # Browser-facing backend URL.
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      # Server-side backend URL used by next-auth's credentials authorize() from
+      # inside the container (localhost would resolve to the frontend itself).
+      INTERNAL_API_URL: http://backend:8080
+      NEXTAUTH_URL: http://localhost:3000
+      # Encrypts the next-auth session cookie. Replace in production.
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-change-me-to-a-strong-random-secret}
+      GOOGLE_CLIENT_ID: your-google-client-id
+      GITHUB_CLIENT_ID: your-github-client-id
+      GLUU_ISSUER: https://your-gluu-server.example.com
+      GLUU_CLIENT_ID: your-gluu-client-id
+      GLUU_CLIENT_SECRET: your-gluu-client-secret
+      NEXT_PUBLIC_GLUU_ENABLED: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+
+  # Zero-build static jQuery + Bootstrap frontend (alternative to `frontend`).
+  # Served by nginx on http://localhost:8081 for look & feel comparison.
+  frontend-jquery:
+    build:
+      context: ./frontend-jquery
+      dockerfile: Dockerfile
+    container_name: lattice-frontend-jquery
+    ports:
+      - "8081:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:

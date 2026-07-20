@@ -83,10 +83,10 @@ docs/_build/
 target/
 
 # Go build artifacts and downloaded rules
-go-checkmate/checkmate-go
-go-checkmate/rules/
-go-checkmate/bench*.json
-go-checkmate/tool-outputs/
+lattice/lattice
+lattice/rules/
+lattice/bench*.json
+lattice/tool-outputs/
 
 # Jupyter Notebook
 .ipynb_checkpoints

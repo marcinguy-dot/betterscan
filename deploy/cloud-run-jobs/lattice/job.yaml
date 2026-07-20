@@ -1,0 +1,25 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: lattice-scan
+spec:
+  template:
+    spec:
+      taskCount: 100
+      parallelism: 100
+      template:
+        spec:
+          maxRetries: 1
+          timeoutSeconds: 3600
+          containers:
+            - image: REGION-docker.pkg.dev/PROJECT/REPO/lattice:latest
+              args:
+                - "--code-dir=/workspace/scan-target"
+                - "--strategy=parallel"
+                - "--jobs=8"
+                - "--json-out=/workspace/out/results.json"
+                - "--sarif-out=/workspace/out/results.sarif"
+                - "--html-out=/workspace/out/results.html"
+              env:
+                - name: OPENAI_API_KEY
+                  value: ""

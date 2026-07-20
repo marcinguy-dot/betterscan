@@ -3,7 +3,18 @@
 **Product name:** Lattice  
 **Tagline (optional):** Deep code security · graph-aware scanning  
 
-The monorepo / package paths may still say `checkmate` until a full rename; user-facing brand is **Lattice**.
+## Paths after rename
+
+| Old | New |
+|-----|-----|
+| `go-checkmate/` | `lattice/` |
+| `checkmate-web/` | `lattice-web/` |
+| binary `checkmate-go` | `lattice` |
+| `~/.checkmate/` | `~/.lattice/` |
+| `CHECKMATE_PATH` | `LATTICE_PATH` |
+| DB name `checkmate` | `lattice` |
+
+The Codeberg remote may still be named `checkmate-go` until renamed on the host.
 
 ## Assets
 

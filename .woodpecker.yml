@@ -4,12 +4,12 @@ name: default
 platform: linux/amd64
 
 steps:
-  build_and_test_go_checkmate:
+  build_and_test_lattice:
     image: golang:1.23
     commands:
-      - cd go-checkmate
+      - cd lattice
       - go test ./...
-      - go build -o checkmate-go .
+      - go build -o lattice .
     when:
       event: [push, tag, pull_request]
   renovate:

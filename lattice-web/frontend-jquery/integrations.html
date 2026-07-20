@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Integrations &middot; Lattice</title>
+  <link rel="stylesheet" href="vendor/bootstrap-5.3.3.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="nav"></div>
+
+  <div class="page-container" data-testid="integrations-page">
+    <h1 class="h3 fw-bold mb-2">Integrations</h1>
+    <p class="text-muted small mb-4">
+      GitHub App install for modern permissions, or PAT for GitLab / Bitbucket / other git hosts.
+    </p>
+
+    <div id="error" class="alert alert-danger d-none" data-testid="integrations-error"></div>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5">GitHub App</h2>
+        <p class="text-muted small" id="githubStatus">Checking configuration…</p>
+        <button id="githubInstallBtn" class="btn btn-primary" data-testid="github-install-btn" disabled>
+          Install GitHub App
+        </button>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-body">
+        <h2 class="h5">Token / PAT</h2>
+        <form id="patForm" data-testid="pat-form">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="provider">Provider</label>
+              <select class="form-select" id="provider" data-testid="pat-provider">
+                <option value="gitlab">GitLab</option>
+                <option value="bitbucket">Bitbucket</option>
+                <option value="github">GitHub (PAT)</option>
+                <option value="generic">Generic git</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="host">Host</label>
+              <input class="form-control" id="host" data-testid="pat-host" placeholder="gitlab.com" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="display_name">Display name</label>
+              <input class="form-control" id="display_name" data-testid="pat-name" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="token">Token</label>
+              <input class="form-control" id="token" type="password" required data-testid="pat-token" />
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-primary" data-testid="pat-submit">Save connection</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h5">Connected accounts</h2>
+        <div id="connections" data-testid="connections-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="vendor/jquery-3.7.1.min.js"></script>
+  <script src="vendor/bootstrap-5.3.3.bundle.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    $(function () {
+      if (!Lattice.requireAuth()) return;
+      Lattice.renderNav("integrations");
+
+      function showError(msg) {
+        if (!msg) {
+          $("#error").addClass("d-none").text("");
+          return;
+        }
+        $("#error").removeClass("d-none").text(msg);
+      }
+
+      function load() {
+        Lattice.api("/api/v1/vcs/providers").done(function (p) {
+          var gh = p.github_app || {};
+          if (gh.mock) {
+            $("#githubStatus").text("Mock mode enabled (GITHUB_APP_MOCK=1).");
+            $("#githubInstallBtn").prop("disabled", false).text("Connect mock GitHub App");
+          } else if (gh.configured) {
+            $("#githubStatus").text("GitHub App configured.");
+            $("#githubInstallBtn").prop("disabled", false);
+          } else {
+            $("#githubStatus").text("Not configured — set GITHUB_APP_* or GITHUB_APP_MOCK=1.");
+            $("#githubInstallBtn").prop("disabled", true);
+          }
+        });
+        Lattice.api("/api/v1/vcs/connections").done(function (list) {
+          var $c = $("#connections").empty();
+          if (!list || !list.length) {
+            $c.append('<p class="text-muted small mb-0">No connections yet.</p>');
+            return;
+          }
+          list.forEach(function (conn) {
+            var row =
+              '<div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2" data-testid="connection-' +
+              Lattice.esc(conn.id) +
+              '">' +
+              "<div><strong>" +
+              Lattice.esc(conn.display_name) +
+              '</strong><div class="small text-muted">' +
+              Lattice.esc(conn.provider) +
+              " · " +
+              Lattice.esc(conn.host) +
+              "</div></div>" +
+              '<button class="btn btn-outline-secondary btn-sm disconnect" data-id="' +
+              Lattice.esc(conn.id) +
+              '">Disconnect</button></div>';
+            $c.append(row);
+          });
+        });
+      }
+
+      $("#githubInstallBtn").on("click", function () {
+        showError("");
+        Lattice.api("/api/v1/vcs/github/install-url")
+          .done(function (data) {
+            if (data.mock) {
+              load();
+              return;
+            }
+            if (data.url) window.location.href = data.url;
+          })
+          .fail(function (xhr) {
+            showError(Lattice.errorMessage(xhr, "Install failed"));
+          });
+      });
+
+      $("#patForm").on("submit", function (e) {
+        e.preventDefault();
+        showError("");
+        Lattice.api("/api/v1/vcs/connections", {
+          method: "POST",
+          body: {
+            provider: $("#provider").val(),
+            host: $("#host").val(),
+            display_name: $("#display_name").val(),
+            token: $("#token").val(),
+          },
+        })
+          .done(function () {
+            $("#token").val("");
+            load();
+          })
+          .fail(function (xhr) {
+            showError(Lattice.errorMessage(xhr, "Save failed"));
+          });
+      });
+
+      $("#connections").on("click", ".disconnect", function () {
+        var id = $(this).data("id");
+        Lattice.api("/api/v1/vcs/connections/" + id, { method: "DELETE" }).always(load);
+      });
+
+      load();
+    });
+  </script>
+</body>
+</html>
