@@ -1,4 +1,4 @@
-# Vulnerable fixtures for lattice smoke tests
+# Vulnerable fixtures for betterscan smoke tests
 
 Hand-written snippets to exercise each scanner plugin:
 
@@ -18,14 +18,14 @@ Hand-written snippets to exercise each scanner plugin:
 ## CLI examples
 
 ```bash
-cd lattice
-./lattice --code-dir ../fixtures/vulnerable --install-missing \
+cd betterscan
+./betterscan --code-dir ../fixtures/vulnerable --install-missing \
   --tools cpg,trivy,bandit,gostaticcheck,opengrep,joern \
-  --json-out /tmp/lattice-vuln.json --strategy sequential
+  --json-out /tmp/betterscan-vuln.json --strategy sequential
 
 # Deduplication scopes
-./lattice --code-dir ../fixtures/vulnerable --tools cpg,trivy \
+./betterscan --code-dir ../fixtures/vulnerable --tools cpg,trivy \
   --dedupe-scope strict --json-out /tmp/strict.json
-./lattice --code-dir ../fixtures/vulnerable --tools cpg,trivy \
+./betterscan --code-dir ../fixtures/vulnerable --tools cpg,trivy \
   --dedupe-scope file-line --json-out /tmp/file-line.json
 ```

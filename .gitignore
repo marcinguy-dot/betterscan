@@ -83,10 +83,10 @@ docs/_build/
 target/
 
 # Go build artifacts and downloaded rules
-lattice/lattice
-lattice/rules/
-lattice/bench*.json
-lattice/tool-outputs/
+betterscan/betterscan
+betterscan/rules/
+betterscan/bench*.json
+betterscan/tool-outputs/
 
 # Jupyter Notebook
 .ipynb_checkpoints

@@ -1,0 +1,34 @@
+{
+  "family": "betterscan-scan",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::<account-id>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<account-id>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "betterscan",
+      "image": "<account-id>.dkr.ecr.<region>.amazonaws.com/betterscan:latest",
+      "essential": true,
+      "command": [
+        "--strategy=parallel",
+        "--jobs=8",
+        "--json-out=/tmp/results.json",
+        "--sarif-out=/tmp/results.sarif",
+        "--html-out=/tmp/results.html"
+      ],
+      "environment": [
+        { "name": "OPENAI_API_KEY", "value": "" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/betterscan-scan",
+          "awslogs-region": "<region>",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
