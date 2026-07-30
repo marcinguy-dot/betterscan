@@ -25,3 +25,37 @@ steps:
     when:
       - event: [manual, cron]
         cron: renovate_schedule
+
+---
+kind: pipeline
+name: release
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+  build_release_assets:
+    image: golang:1.23
+    commands:
+      - chmod +x scripts/release-build.sh
+      - ./scripts/release-build.sh
+    when:
+      event: tag
+
+  publish_release:
+    image: woodpeckerci/plugin-release
+    settings:
+      api_key:
+        from_secret: RELEASE_TOKEN
+      base_url: https://codeberg.org
+      files:
+        - dist/betterscan_*.tar.gz
+      checksum:
+        - sha256
+      checksum-file: checksums.txt
+      checksum-flatten: true
+    depends_on:
+      - build_release_assets
+    when:
+      event: tag
