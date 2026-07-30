@@ -150,6 +150,96 @@ path_contains() {
 	esac
 }
 
+profile_contains_dir() {
+	file="$1"
+	dir="$2"
+	[ -f "$file" ] || return 1
+	grep -Fq "$dir" "$file" 2>/dev/null
+}
+
+append_posix_path() {
+	file="$1"
+	dir="$2"
+	mkdir -p "$(dirname "$file")"
+	if profile_contains_dir "$file" "$dir"; then
+		return 0
+	fi
+	{
+		printf '\n# betterscan installer: ensure CLI is on PATH\n'
+		printf 'export PATH="%s:$PATH"\n' "$dir"
+	} >>"$file"
+	log "updated ${file}"
+}
+
+configure_fish_path() {
+	dir="$1"
+	file="${HOME}/.config/fish/conf.d/betterscan.fish"
+	mkdir -p "$(dirname "$file")"
+	if [ -f "$file" ] && grep -Fq "$dir" "$file" 2>/dev/null; then
+		return 0
+	fi
+	{
+		printf '# betterscan installer: ensure CLI is on PATH\n'
+		if command -v fish >/dev/null 2>&1 && fish -c 'functions fish_add_path' >/dev/null 2>&1; then
+			printf 'fish_add_path -gm -- %s\n' "$dir"
+		else
+			printf 'set -gx PATH %s $PATH\n' "$dir"
+		fi
+	} >"$file"
+	log "updated ${file}"
+}
+
+configure_shell_path() {
+	dir="$1"
+	shell_name="$(basename "${SHELL:-}")"
+
+	if path_contains "$dir"; then
+		return 0
+	fi
+
+	case "$shell_name" in
+	zsh)
+		append_posix_path "${HOME}/.zshrc" "$dir"
+		;;
+	bash)
+		if [ -f "${HOME}/.bashrc" ]; then
+			append_posix_path "${HOME}/.bashrc" "$dir"
+		fi
+		append_posix_path "${HOME}/.bash_profile" "$dir"
+		;;
+	fish)
+		configure_fish_path "$dir"
+		;;
+	*)
+		append_posix_path "${HOME}/.profile" "$dir"
+		;;
+	esac
+}
+
+shell_setup_hint() {
+	dir="$1"
+	shell_name="$(basename "${SHELL:-}")"
+
+	case "$shell_name" in
+	zsh)
+		printf '%s\n' "${HOME}/.zshrc"
+		;;
+	bash)
+		if [ -f "${HOME}/.bashrc" ]; then
+			printf '%s\n' "${HOME}/.bashrc"
+		else
+			printf '%s\n' "${HOME}/.bash_profile"
+		fi
+		;;
+	fish)
+		printf '%s\n' "${HOME}/.config/fish/conf.d/betterscan.fish"
+		;;
+	*)
+		printf '%s\n' "${HOME}/.profile"
+		;;
+	esac
+}
+
 while getopts "b:v:h" opt; do
 	case "$opt" in
 	b) INSTALL_DIR="$OPTARG" ;;
@@ -225,9 +315,12 @@ else
 fi
 
 log "success"
+configure_shell_path "$INSTALL_DIR"
 if path_contains "$INSTALL_DIR"; then
 	log "run: ${BINARY}"
 else
-	log "run: ${DEST}"
-	log "add to PATH: export PATH=\"${INSTALL_DIR}:\$PATH\""
+	log "run: ${BINARY} (after restarting your shell)"
+	log "or run now: export PATH=\"${INSTALL_DIR}:\$PATH\" && ${BINARY}"
+	profile="$(shell_setup_hint "$INSTALL_DIR")"
+	log "updated shell config: ${profile}"
 fi
