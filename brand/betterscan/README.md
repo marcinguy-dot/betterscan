@@ -14,8 +14,7 @@
 | `LATTICE_PATH` | `BETTERSCAN_PATH` |
 | DB name `lattice` | `betterscan` |
 
-Earlier names in this lineage: **Checkmate** → **Lattice** → **BetterScan**.  
-The repository has been migrated from Codeberg (checkmate-go) to GitHub (betterscan).
+Earlier names in this lineage: **Checkmate** → **Lattice** → **BetterScan**.
 
 ## Assets
 

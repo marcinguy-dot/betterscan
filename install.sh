@@ -79,7 +79,7 @@ detect_arch() {
 
 fetch_latest_version() {
 	need_cmd curl
-	api_url="https://${HOST}/api/v1/repos/${OWNER}/${REPO}/releases/latest"
+	api_url="https://api.github.com/repos/${OWNER}/${REPO}/releases/latest"
 	json="$(curl -fsSL "$api_url" 2>/dev/null || true)"
 	if [ -z "$json" ]; then
 		return 1
