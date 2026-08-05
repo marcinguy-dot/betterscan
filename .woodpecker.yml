@@ -7,7 +7,7 @@ steps:
   build_and_test_betterscan:
     image: golang:1.23
     commands:
-      - cd betterscan
+      - cd betterscan-core
       - go test ./...
       - go build -o betterscan .
     when:
@@ -15,8 +15,8 @@ steps:
   renovate:
     image: renovate/renovate:latest@sha256:98cb3ed58e90f1813266243d65334d499a63b80fcdc8e4806c2a75c4fbc5616f
     environment:
-      RENOVATE_PLATFORM: forgejo
-      RENOVATE_ENDPOINT: https://codeberg.org/api/v1
+      RENOVATE_PLATFORM: github
+      RENOVATE_ENDPOINT: https://api.github.com
       RENOVATE_AUTODISCOVER: 'false'
       RENOVATE_REPOSITORIES: ${CI_REPO}
       RENOVATE_GIT_AUTHOR: Renovate Bot <bot@renovateapp.com>
@@ -48,7 +48,7 @@ steps:
     settings:
       api_key:
         from_secret: RELEASE_TOKEN
-      base_url: https://codeberg.org
+      base_url: https://github.com
       files:
         - dist/betterscan_*.tar.gz
       checksum:

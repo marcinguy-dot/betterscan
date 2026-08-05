@@ -15,7 +15,7 @@
 | DB name `lattice` | `betterscan` |
 
 Earlier names in this lineage: **Checkmate** → **Lattice** → **BetterScan**.  
-The Codeberg remote may still be named `checkmate-go` until renamed on the host.
+The repository has been migrated from Codeberg (checkmate-go) to GitHub (betterscan).
 
 ## Assets
 

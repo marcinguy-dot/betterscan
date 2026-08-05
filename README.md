@@ -6,17 +6,22 @@ Deep code security scanning — graph-aware CLI and self-hosted web platform.
 
 This monorepo contains:
 
-- `betterscan/` – Go CLI runner (OpenGrep, Trivy, Bandit, Brakeman, staticcheck, Joern, Fraunhofer CPG)
+- `betterscan-core/` – Go scanning engine (OpenGrep, Trivy, Bandit, Brakeman, staticcheck, Joern, Fraunhofer CPG)
+- `betterscan-cli/` – CLI interface for the scanning engine
+- `betterscan-java/` – Java wrappers and CPG integration
 - `betterscan-web/` – Self-hosted platform (API, worker, Next.js + jQuery UIs, Redis scan queue, VCS integrations)
+- `betterscan-graph/` – Graph-based scanning components
+- `betterscan-sast/` – SAST integration layer
+- `betterscan-agents/` – Tool integrations/agents
 - `fixtures/vulnerable/` – Small multi-language samples for CLI smoke tests
 - `deploy/cloud-run-jobs/betterscan/` – Cloud Run Jobs templates (run N tasks)
 - `deploy/ecs-fargate/betterscan/` – ECS/Fargate templates (run N tasks)
 - `broken-vulnerable-code-snippets/` – Vulnerable code dataset (cloned from https://github.com/snoopysecurity/Broken-Vulnerable-Code-Snippets)
 - `Speed.md` – Benchmark results
 
-For CLI usage, see `betterscan/README.md`. For the web stack, see `betterscan-web/README.md`.
+For CLI usage, see `betterscan-cli/README.md`. For the web stack, see `betterscan-web/README.md`.
 
-**Graph engines:** BetterScan runs **Joern** for mature, excellent default vulnerability queries, and **Fraunhofer CPG** primarily for **new custom rules** and **project-specific enforcement** on a multi-language code property graph (library / extensible analyses—aligned with Fraunhofer’s platform framing and tools such as Codyze). Details: [betterscan/README.md § Graph engines](betterscan/README.md#graph-engines-joern-vs-fraunhofer-cpg).
+**Graph engines:** BetterScan runs **Joern** for mature, excellent default vulnerability queries, and **Fraunhofer CPG** primarily for **new custom rules** and **project-specific enforcement** on a multi-language code property graph (library / extensible analyses—aligned with Fraunhofer's platform framing and tools such as Codyze). Details: [betterscan-core/README.md § Graph engines](betterscan-core/README.md#graph-engines-joern-vs-fraunhofer-cpg).
 
 **Web VCS access:** Projects can link a **GitHub App** install (permissions + repo picker) or a **PAT/token** for GitLab, Bitbucket, GitHub, or generic HTTPS remotes. Scans are enqueued on Redis; the worker clones with short-lived credentials. Details: [betterscan-web/README.md § VCS](betterscan-web/README.md#vcs-github-app-vs-gitlab--bitbucket--other).
 
@@ -54,8 +59,8 @@ Login and dashboard, side by side (full screenshots of every screen are in the
 but needs ongoing maintenance (npm audit churn, build, upgrades); the jQuery
 version is plainer but zero-build and will run for years untouched. The two are
 also available as single-frontend branches
-([`frontend-nextjs`](https://codeberg.org/marcinguy/checkmate-go/src/branch/frontend-nextjs),
-[`frontend-jquery`](https://codeberg.org/marcinguy/checkmate-go/src/branch/frontend-jquery))
+([`frontend-nextjs`](https://github.com/marcinguy-dot/betterscan/tree/frontend-nextjs),
+[`frontend-jquery`](https://github.com/marcinguy-dot/betterscan/tree/frontend-jquery))
 if you want to deploy only one.
 
 ## Security & Isolation: Qubes OS for Workers

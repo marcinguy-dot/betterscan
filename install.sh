@@ -2,9 +2,9 @@
 # BetterScan CLI installer
 #
 # Usage:
-#   curl -fsSL https://codeberg.org/marcinguy/checkmate-go/raw/branch/main/install.sh | sh
-#   curl -fsSL https://codeberg.org/marcinguy/checkmate-go/raw/branch/main/install.sh | sh -s -- -b /usr/local/bin
-#   curl -fsSL https://codeberg.org/marcinguy/checkmate-go/raw/branch/main/install.sh | sh -s -- -v v0.1.0
+#   curl -fsSL https://github.com/marcinguy-dot/betterscan/raw/refs/heads/main/install.sh | sh
+#   curl -fsSL https://github.com/marcinguy-dot/betterscan/raw/refs/heads/main/install.sh | sh -s -- -b /usr/local/bin
+#   curl -fsSL https://github.com/marcinguy-dot/betterscan/raw/refs/heads/main/install.sh | sh -s -- -v v0.1.0
 #
 # Options:
 #   -b DIR   Install directory (default: ~/.local/bin)
@@ -13,9 +13,9 @@
 
 set -e
 
-OWNER="${BETTERSCAN_INSTALL_OWNER:-marcinguy}"
-REPO="${BETTERSCAN_INSTALL_REPO:-checkmate-go}"
-HOST="${BETTERSCAN_INSTALL_HOST:-codeberg.org}"
+OWNER="${BETTERSCAN_INSTALL_OWNER:-marcinguy-dot}"
+REPO="${BETTERSCAN_INSTALL_REPO:-betterscan}"
+HOST="${BETTERSCAN_INSTALL_HOST:-github.com}"
 BINARY="${BETTERSCAN_INSTALL_BINARY:-betterscan}"
 DEFAULT_INSTALL_DIR="${HOME}/.local/bin"
 VERSION=""

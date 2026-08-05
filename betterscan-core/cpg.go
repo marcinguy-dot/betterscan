@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	cpgVersion       = "10.8.2"
-	cpgGroupID       = "de.fraunhofer.aisec"
-	cpgArtifactID    = "cpg-core"
-	minJavaVersion   = 17
+	cpgVersion     = "10.8.2"
+	cpgGroupID     = "de.fraunhofer.aisec"
+	cpgArtifactID  = "cpg-core"
+	minJavaVersion = 17
 	// Must match package + class in cpg/src/main/java/.../Runner.java
 	cpgRunnerPackage = "com.betterscan.security.Runner"
 )
@@ -926,7 +926,7 @@ func httpGetWithRetry(url string) (*http.Response, error) {
 		if reqErr != nil {
 			return nil, reqErr
 		}
-		req.Header.Set("User-Agent", "betterscan/1.0.0 (https://github.com/marcinguy/checkmate-go)")
+		req.Header.Set("User-Agent", "betterscan/1.0.0 (https://github.com/marcinguy-dot/betterscan)")
 
 		resp, err = client.Do(req)
 		if err == nil {
