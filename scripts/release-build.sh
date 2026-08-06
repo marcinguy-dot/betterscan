@@ -20,7 +20,7 @@ build_target() {
 
 	log "building ${os}/${arch} (${VERSION})"
 	(
-		cd "${ROOT}/betterscan"
+		cd "${ROOT}/betterscan-core"
 		GO111MODULE=on CGO_ENABLED=0 GOOS="$os" GOARCH="$arch" \
 			go build -ldflags="-s -w" -o "${tmp}/${BINARY}" .
 	)

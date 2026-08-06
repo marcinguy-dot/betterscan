@@ -31,6 +31,25 @@ This monorepo contains:
 - `broken-vulnerable-code-snippets/` – Vulnerable code dataset (cloned from https://github.com/snoopysecurity/Broken-Vulnerable-Code-Snippets)
 - `Speed.md` – Benchmark results
 
+## Install CLI (macOS / Linux / WSL)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/betterscan-io/betterscan/main/scripts/install.sh | sh
+```
+
+Also works:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/betterscan-io/betterscan/main/install.sh | sh
+# custom prefix:
+curl -fsSL https://raw.githubusercontent.com/betterscan-io/betterscan/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+# pin a release tag (when published):
+curl -fsSL https://raw.githubusercontent.com/betterscan-io/betterscan/main/scripts/install.sh | sh -s -- -v v0.1.0
+```
+
+Use **`-fsSL`** (not `-sSL`) so HTTP errors fail instead of piping a GitHub HTML 404 into `sh`.  
+If no GitHub release asset exists for your platform, the installer builds from source (requires **Go 1.22+** and **git**).
+
 For CLI usage, see `betterscan-cli/README.md`. For the web stack, see `betterscan-web/README.md`.
 
 **Graph engines:** BetterScan runs **Joern** for mature, excellent default vulnerability queries, and **Fraunhofer CPG** primarily for **new custom rules** and **project-specific enforcement** on a multi-language code property graph (library / extensible analyses—aligned with Fraunhofer's platform framing and tools such as Codyze). Details: [betterscan-core/README.md § Graph engines](betterscan-core/README.md#graph-engines-joern-vs-fraunhofer-cpg).
