@@ -1,4 +1,4 @@
-# Brakeman / OpenGrep style: command injection and SQL-like string concat
+# OpenGrep-style Ruby: command injection and SQL-like string concat
 require 'open3'
 
 def run(cmd)

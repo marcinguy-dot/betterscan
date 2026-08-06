@@ -1,0 +1,25 @@
+# Third-party notices
+
+BetterScan is licensed under the PolyForm Noncommercial License 1.0.0
+(see LICENSE). Commercial use of BetterScan requires a separate license
+from the copyright holder.
+
+BetterScan may invoke the following external tools. They remain under
+their own licenses and are not re-licensed by BetterScan. Install,
+attribution, and compliance for each tool are the operator's
+responsibility when redistributing or running them.
+
+| Tool | Typical license | Project |
+|------|-----------------|---------|
+| OpenGrep | LGPL-2.1 | https://github.com/opengrep/opengrep |
+| Trivy | Apache-2.0 | https://github.com/aquasecurity/trivy |
+| Bandit | Apache-2.0 | https://github.com/PyCQA/bandit |
+| staticcheck | MIT | https://github.com/dominikh/go-tools |
+| Joern | Apache-2.0 | https://github.com/joernio/joern |
+| Fraunhofer CPG | Apache-2.0 | https://github.com/Fraunhofer-AISEC/cpg |
+
+OpenGrep rule packs (for example Aikido and Amplify) are separate
+works with their own licenses; check each ruleset you download or ship.
+
+Bundled frontend dependencies (e.g. Next.js, Bootstrap, jQuery) and
+other libraries remain under the licenses of their respective packages.

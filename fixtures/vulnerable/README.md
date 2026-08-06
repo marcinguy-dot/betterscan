@@ -8,12 +8,10 @@ Hand-written snippets to exercise each scanner plugin:
 | `c/bof.c` | **joern**, opengrep | `gets` / strcpy buffer overflow |
 | `python/tainted.py` | **bandit**, opengrep | shell=True, eval, pickle, yaml.load |
 | `go/` | **gostaticcheck**, opengrep | deprecated ioutil, path remove |
-| `ruby/app.rb` | **brakeman***, opengrep | system/backticks, SQL concat |
+| `ruby/app.rb` | opengrep | system/backticks, SQL concat |
 | `js/sqli.js` | opengrep | SQL + command injection |
 | `php/sqli.php` | opengrep | SQL + command injection + XSS |
 | `docker/Dockerfile` | **trivy** | USER root / weak image config |
-
-\* Brakeman only runs fully on Rails apps; bare Ruby may be skipped or partial.
 
 ## CLI examples
 

@@ -49,7 +49,6 @@ const (
 	ToolOpengrep    ToolKind = "opengrep"
 	ToolTrivy       ToolKind = "trivy"
 	ToolBandit      ToolKind = "bandit"
-	ToolBrakeman    ToolKind = "brakeman"
 	ToolStaticcheck ToolKind = "staticcheck"
 	ToolCpg         ToolKind = "cpg"
 	ToolJoern       ToolKind = "joern"
@@ -276,7 +275,6 @@ func availableTools(selected map[string]struct{}) []Tool {
 		{Name: "opengrep", Kind: ToolOpengrep},
 		{Name: "trivy", Kind: ToolTrivy},
 		{Name: "bandit", Kind: ToolBandit},
-		{Name: "brakeman", Kind: ToolBrakeman},
 		{Name: "gostaticcheck", Kind: ToolStaticcheck},
 		{Name: "cpg", Kind: ToolCpg},
 		{Name: "joern", Kind: ToolJoern},
@@ -438,21 +436,6 @@ func buildCommand(tool Tool, context Context) (*exec.Cmd, string, error) {
 		return buildSimpleCommand("bandit", context, func(args *[]string) {
 			*args = append(*args, "-r", context.CodeDir, "-f", "json", "-x", ".git,.betterscan")
 		})
-	case ToolBrakeman:
-		hasRuby, err := hasRubyFiles(context.CodeDir)
-		if err != nil {
-			return nil, "", err
-		}
-		isRails, err := isRailsApp(context.CodeDir)
-		if err != nil {
-			return nil, "", err
-		}
-		if !hasRuby && !isRails {
-			return nil, "", errors.New("Brakeman skipped: no Ruby files or Rails app detected")
-		}
-		return buildSimpleCommand("brakeman", context, func(args *[]string) {
-			*args = append(*args, "-q", "-f", "json", context.CodeDir)
-		})
 	case ToolStaticcheck:
 		if !hasGoMod(context.CodeDir) {
 			return nil, "", errors.New("GoStaticcheck skipped: go.mod not found")
@@ -523,8 +506,6 @@ func findPreinstalledBin(bin string) string {
 	case "bandit":
 		candidates = append(candidates, filepath.Join(home, ".local", "bin", "bandit"))
 		candidates = append(candidates, filepath.Join(home, "Library", "Python", "3.9", "bin", "bandit"))
-	case "brakeman":
-		candidates = append(candidates, filepath.Join(home, ".gem", "ruby", "2.6.0", "bin", "brakeman"))
 	case "trivy":
 		candidates = append(candidates, filepath.Join(home, ".local", "bin", "trivy"))
 	}
@@ -818,42 +799,6 @@ func hasGoMod(codeDir string) bool {
 	return err == nil
 }
 
-func hasRubyFiles(codeDir string) (bool, error) {
-	found := false
-	err := filepath.WalkDir(codeDir, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if strings.HasSuffix(strings.ToLower(path), ".rb") {
-			found = true
-			return io.EOF
-		}
-		return nil
-	})
-	if err != nil && err != io.EOF {
-		return false, err
-	}
-	return found, nil
-}
-
-func isRailsApp(codeDir string) (bool, error) {
-	if _, err := os.Stat(filepath.Join(codeDir, "config", "application.rb")); err == nil {
-		return true, nil
-	}
-	gemfile := filepath.Join(codeDir, "Gemfile")
-	data, err := os.ReadFile(gemfile)
-	if err != nil {
-		return false, nil
-	}
-	if strings.Contains(string(data), "rails") {
-		return true, nil
-	}
-	return false, nil
-}
-
 func parseToolOutput(tool Tool, stdout []byte, stderr []byte) []Issue {
 	// Joern emits plain-text "Result:" lines (not JSON). Parse before the
 	// empty-JSON short-circuit so stderr-only output is still handled.
@@ -879,8 +824,6 @@ func parseToolOutput(tool Tool, stdout []byte, stderr []byte) []Issue {
 		return parseTrivy(output, tool.Name)
 	case ToolBandit:
 		return parseBandit(output, tool.Name)
-	case ToolBrakeman:
-		return parseBrakeman(output, tool.Name)
 	case ToolStaticcheck:
 		return parseStaticcheck(output, tool.Name)
 	default:
@@ -958,25 +901,6 @@ func parseBandit(output []byte, analyzer string) []Issue {
 	var issues []Issue
 	for _, item := range payload.Results {
 		issues = append(issues, newIssue(analyzer, item.TestID, item.Filename, item.Line, item.IssueText))
-	}
-	return issues
-}
-
-func parseBrakeman(output []byte, analyzer string) []Issue {
-	var payload struct {
-		Warnings []struct {
-			CheckName string `json:"check_name"`
-			File      string `json:"file"`
-			Line      int    `json:"line"`
-			Message   string `json:"message"`
-		} `json:"warnings"`
-	}
-	if err := json.Unmarshal(output, &payload); err != nil {
-		return nil
-	}
-	var issues []Issue
-	for _, item := range payload.Warnings {
-		issues = append(issues, newIssue(analyzer, item.CheckName, item.File, item.Line, item.Message))
 	}
 	return issues
 }
@@ -1097,8 +1021,6 @@ func installTool(bin string) (string, error) {
 		return installTrivy()
 	case "bandit":
 		return installBandit()
-	case "brakeman":
-		return installBrakeman()
 	case "staticcheck":
 		return installStaticcheck()
 	case "cpg":
@@ -1238,36 +1160,6 @@ func installBandit() (string, error) {
 		return "installed bandit via pip", nil
 	}
 	return "", errors.New("Bandit install requires python3 or pip")
-}
-
-func installBrakeman() (string, error) {
-	installMutex.Lock()
-	defer installMutex.Unlock()
-
-	if _, err := exec.LookPath("brakeman"); err == nil {
-		return "brakeman already installed", nil
-	}
-	home, _ := os.UserHomeDir()
-	if home != "" {
-		dest := filepath.Join(home, ".gem", "ruby", "2.6.0", "bin", "brakeman")
-		if _, err := os.Stat(dest); err == nil {
-			return "brakeman already installed", nil
-		}
-	}
-
-	addPathDir(filepath.Join(os.Getenv("HOME"), ".gem", "ruby", "2.6.0", "bin"))
-	if !hasCommand("gem") {
-		return "", errors.New("Brakeman install requires gem")
-	}
-	_, err := runInstallCommand("gem", "install", "brakeman")
-	if err == nil {
-		return "installed brakeman via gem", nil
-	}
-	_, err = runInstallCommand("gem", "install", "brakeman", "-v", "5.4.1")
-	if err != nil {
-		return "", err
-	}
-	return "installed brakeman via gem (5.4.1)", nil
 }
 
 func installStaticcheck() (string, error) {

@@ -8,7 +8,7 @@ BetterScan continues the **Contender** project line presented at
 code property graphs.
 
 ## Features
-- Runs common BetterScan tools (OpenGrep, Trivy, Bandit, Brakeman, GoStaticcheck, Joern, Fraunhofer CPG)
+- Runs common BetterScan tools (OpenGrep, Trivy, Bandit, GoStaticcheck, Joern, Fraunhofer CPG)
 - Two strategies:
   - `sequential`: run tools one-by-one with internal tool jobs
   - `parallel`: run tools concurrently with a core-limited worker pool

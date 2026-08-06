@@ -21,7 +21,6 @@ var allowedTools = map[string]struct{}{
 	"opengrep":      {},
 	"trivy":         {},
 	"bandit":        {},
-	"brakeman":      {},
 	"gostaticcheck": {},
 	"cpg":           {},
 	"joern":         {},
