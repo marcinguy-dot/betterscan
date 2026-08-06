@@ -122,21 +122,55 @@ func processScanJob(ctx context.Context, db *gorm.DB, rdb *redis.Client, job *Sc
 	// Run betterscan scanner
 	betterscanPath := getEnv("BETTERSCAN_PATH", "../betterscan/betterscan")
 	outputPath := filepath.Join(os.TempDir(), fmt.Sprintf("scan-%s.json", job.ScanID))
+	// Persist rules outside the ephemeral repo dir so refreshes can reuse them.
+	rulesDir := getEnv("BETTERSCAN_RULES_DIR", filepath.Join(os.TempDir(), "betterscan-rules"))
 
-	cmd := exec.Command(betterscanPath,
+	args := []string{
 		"--code-dir", repoDir,
 		"--strategy", job.Strategy,
-		"--tools", job.Tools,
 		"--json-out", outputPath,
-	)
+		"--rules-dir", rulesDir,
+	}
+	if job.Tools != "" {
+		args = append(args, "--tools", job.Tools)
+	}
+
+	cmd := exec.Command(betterscanPath, args...)
+	// Ensure installers that drop binaries under ~/.local/bin are found.
+	home, _ := os.UserHomeDir()
+	pathEnv := os.Getenv("PATH")
+	extraPaths := []string{
+		filepath.Join(home, ".local", "bin"),
+		filepath.Join(home, ".opengrep", "cli", "latest"),
+		filepath.Join(home, "go", "bin"),
+	}
+	for _, p := range extraPaths {
+		if p != "" && !strings.Contains(pathEnv, p) {
+			pathEnv = p + string(os.PathListSeparator) + pathEnv
+		}
+	}
+	cmd.Env = append(os.Environ(), "PATH="+pathEnv)
 
 	output, err := cmd.CombinedOutput()
+	if len(output) > 0 {
+		log.Printf("Scan %s scanner output:\n%s", job.ScanID, string(output))
+	}
 	if err != nil {
 		return updateScanFailed(db, job.ScanID, fmt.Sprintf("Scan failed: %v\nOutput: %s", err, string(output)))
 	}
 
-	// Parse results
+	// Parse results. Match betterscan CLI JSON (enrichment is an object or omitted).
 	var summary struct {
+		Strategies []struct {
+			Name   string `json:"name"`
+			Tools  []struct {
+				Name     string `json:"name"`
+				Status   string `json:"status"`
+				Note     string `json:"note,omitempty"`
+				Issues   int    `json:"issues,omitempty"`
+				ExitCode *int   `json:"exit_code,omitempty"`
+			} `json:"tools"`
+		} `json:"strategies"`
 		FinalIssues []models.Finding `json:"final_issues"`
 	}
 
@@ -149,19 +183,33 @@ func processScanJob(ctx context.Context, db *gorm.DB, rdb *redis.Client, job *Sc
 		return updateScanFailed(db, job.ScanID, fmt.Sprintf("Failed to parse scan results: %v", err))
 	}
 
+	// Log per-tool outcomes so skipped/failed plugins are visible in worker logs.
+	for _, strat := range summary.Strategies {
+		for _, tool := range strat.Tools {
+			log.Printf("Scan %s tool %s: status=%s issues=%d note=%s",
+				job.ScanID, tool.Name, tool.Status, tool.Issues, tool.Note)
+		}
+	}
+
 	// Save findings
 	scanUUID, err := uuid.Parse(job.ScanID)
 	if err != nil {
-		return fmt.Errorf("invalid scan ID: %w", err)
+		return updateScanFailed(db, job.ScanID, fmt.Sprintf("Invalid scan ID: %v", err))
 	}
 
 	for i := range summary.FinalIssues {
 		summary.FinalIssues[i].ScanID = scanUUID
 		summary.FinalIssues[i].Severity = inferSeverity(summary.FinalIssues[i].Message)
+		// Normalize invalid empty jsonb payloads to NULL.
+		if len(summary.FinalIssues[i].Enrichment) == 0 || string(summary.FinalIssues[i].Enrichment) == "null" {
+			summary.FinalIssues[i].Enrichment = nil
+		}
 	}
 
-	if err := db.Create(&summary.FinalIssues).Error; err != nil {
-		return fmt.Errorf("failed to save findings: %w", err)
+	if len(summary.FinalIssues) > 0 {
+		if err := db.Create(&summary.FinalIssues).Error; err != nil {
+			return updateScanFailed(db, job.ScanID, fmt.Sprintf("Failed to save findings: %v", err))
+		}
 	}
 
 	// Update scan with results
@@ -194,7 +242,7 @@ func processScanJob(ctx context.Context, db *gorm.DB, rdb *redis.Client, job *Sc
 			"medium_count":   mediumCount,
 			"low_count":      lowCount,
 		}).Error; err != nil {
-		return fmt.Errorf("failed to update scan results: %w", err)
+		return updateScanFailed(db, job.ScanID, fmt.Sprintf("Failed to update scan results: %v", err))
 	}
 
 	// Publish completion event
@@ -274,6 +322,7 @@ func redactSecrets(s, secret string) string {
 
 func updateScanFailed(db *gorm.DB, scanID, reason string) error {
 	completedAt := time.Now()
+	log.Printf("Scan %s failed: %s", scanID, reason)
 	return db.Model(&models.Scan{}).
 		Where("id = ?", scanID).
 		Updates(map[string]interface{}{

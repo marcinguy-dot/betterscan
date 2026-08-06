@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -101,7 +102,9 @@ type Finding struct {
 	Fingerprint  string    `gorm:"index" json:"fingerprint"`
 	IsFalsePositive bool `gorm:"default:false;index" json:"is_false_positive"`
 	FalsePositiveReason string `gorm:"type:text" json:"false_positive_reason,omitempty"`
-	Enrichment   string    `gorm:"type:jsonb" json:"enrichment,omitempty"` // JSON
+	// Enrichment stores optional LLM enrichment as jsonb. Use datatypes.JSON so
+	// missing/empty values become SQL NULL (empty string is invalid for jsonb).
+	Enrichment   datatypes.JSON `gorm:"type:jsonb" json:"enrichment,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 	

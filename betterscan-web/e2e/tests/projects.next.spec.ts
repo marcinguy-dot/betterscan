@@ -15,8 +15,8 @@ test.describe("Next.js projects", () => {
     await page.getByTestId("add-project-btn").click();
     await page.getByTestId("project-name").fill("e2e-sample");
     await page.getByTestId("project-repo-url").fill("https://github.com/aquasecurity/trivy-action.git");
-    await page.getByTestId("project-branch").fill("main");
+    await page.getByTestId("project-branch").fill("master");
     await page.getByTestId("project-create-btn").click();
-    await expect(page.getByText("e2e-sample")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("e2e-sample").first()).toBeVisible({ timeout: 20_000 });
   });
 });

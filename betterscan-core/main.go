@@ -541,29 +541,42 @@ func findPreinstalledBin(bin string) string {
 func buildOpengrepCommand(context Context) (*exec.Cmd, string, error) {
 	opengrepBin := os.Getenv("OPENGREP_BIN")
 	if opengrepBin == "" {
-		home, _ := os.UserHomeDir()
-		defaultPath := filepath.Join(home, ".opengrep/cli/latest/opengrep")
-		if _, err := os.Stat(defaultPath); err == nil {
-			opengrepBin = defaultPath
+		if path := resolveOpengrepBin(); path != "" {
+			opengrepBin = path
 		} else {
-			var err error
-			opengrepBin, err = exec.LookPath("opengrep")
-			if err != nil {
-				if context.InstallMissing {
-					note, installErr := installOpengrep()
-					if installErr == nil {
-						opengrepBin, err = exec.LookPath("opengrep")
-						if err == nil {
-							return buildOpengrepCommandWithBin(context, opengrepBin, note)
-						}
-					}
+			if context.InstallMissing {
+				note, installErr := installOpengrep()
+				if installErr != nil {
+					return nil, "", fmt.Errorf("OpenGrep binary not found: %w", installErr)
 				}
-				return nil, "", errors.New("OpenGrep binary not found")
+				// install.sh drops the binary under ~/.opengrep/cli/latest, which is
+				// often not on PATH — re-resolve including that default location.
+				if path := resolveOpengrepBin(); path != "" {
+					return buildOpengrepCommandWithBin(context, path, note)
+				}
+				return nil, "", errors.New("OpenGrep installed but binary not found on PATH or ~/.opengrep/cli/latest")
 			}
+			return nil, "", errors.New("OpenGrep binary not found")
 		}
 	}
 
 	return buildOpengrepCommandWithBin(context, opengrepBin, "")
+}
+
+// resolveOpengrepBin finds opengrep on PATH or in the default install location.
+func resolveOpengrepBin() string {
+	home, _ := os.UserHomeDir()
+	if home != "" {
+		defaultPath := filepath.Join(home, ".opengrep/cli/latest/opengrep")
+		if _, err := os.Stat(defaultPath); err == nil {
+			addPathDir(filepath.Dir(defaultPath))
+			return defaultPath
+		}
+	}
+	if path, err := exec.LookPath("opengrep"); err == nil {
+		return path
+	}
+	return ""
 }
 
 func buildOpengrepCommandWithBin(context Context, opengrepBin, note string) (*exec.Cmd, string, error) {
@@ -1143,6 +1156,10 @@ func installOpengrep() (string, error) {
 	_, err = runInstallCommand(scriptPath)
 	if err != nil {
 		return "", err
+	}
+	// Ensure the default install location is on PATH for subsequent LookPath calls.
+	if home != "" {
+		addPathDir(filepath.Join(home, ".opengrep", "cli", "latest"))
 	}
 	return "installed opengrep via install.sh", nil
 }

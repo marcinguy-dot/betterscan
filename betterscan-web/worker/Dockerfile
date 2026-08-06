@@ -15,7 +15,10 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o worker .
 # Runtime stage
 FROM alpine:latest
 
-RUN apk --no-cache add ca-certificates git gcc musl-dev
+# git: clone repos. bash/curl/wget/tar: betterscan tool installers (opengrep, trivy, …).
+# python3/py3-pip: bandit installer. openjdk optional for cpg/joern (heavy; install on demand).
+RUN apk --no-cache add ca-certificates git bash curl wget tar gzip \
+	gcc musl-dev python3 py3-pip
 
 WORKDIR /root/
 
