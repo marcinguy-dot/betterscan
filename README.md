@@ -42,17 +42,9 @@ choose one:
 cd betterscan-web && docker compose up      # then open :3000 and/or :8081
 ```
 
-### Preview the look & feel before installing
+### Compare before installing
 
-Login and dashboard, side by side (full screenshots of every screen are in the
-[comparison doc](betterscan-web/docs/comparison/README.md)):
-
-| | Next.js | jQuery |
-|---|---|---|
-| Login | [![Next.js login](betterscan-web/docs/comparison/screenshots/nextjs/01-login.png)](betterscan-web/docs/comparison/screenshots/nextjs/01-login.png) | [![jQuery login](betterscan-web/docs/comparison/screenshots/jquery/01-login.png)](betterscan-web/docs/comparison/screenshots/jquery/01-login.png) |
-| Dashboard | [![Next.js dashboard](betterscan-web/docs/comparison/screenshots/nextjs/02-dashboard.png)](betterscan-web/docs/comparison/screenshots/nextjs/02-dashboard.png) | [![jQuery dashboard](betterscan-web/docs/comparison/screenshots/jquery/02-dashboard.png)](betterscan-web/docs/comparison/screenshots/jquery/02-dashboard.png) |
-
-**Full side-by-side comparison (login, dashboard, trends, projects, register):**
+Text comparison of the two UIs (no screenshots in-repo):  
 [`betterscan-web/docs/comparison/README.md`](betterscan-web/docs/comparison/README.md)
 
 **Trade-off:** Next.js gives a nicer developer experience and a more modern look
@@ -71,22 +63,22 @@ To mitigate this, BetterScan can run the worker component inside **Qubes OS** to
 
 ```mermaid
 graph TD
-    subgraph Qubes OS Host
-        Dom0[Dom0: Admin Domain - Air-gapped / No Network]
+    subgraph QUBES["Qubes OS Host"]
+        Dom0["Dom0: Admin Domain - Air-gapped / No Network"]
 
-        subgraph AppVM 1: Web Frontend & DB
-            Frontend[Next.js App / Postgres]
+        subgraph APPVM1["AppVM 1: Web Frontend and DB"]
+            Frontend["Next.js App / Postgres"]
         end
 
-        subgraph AppVM 2: Worker Qube
-            subgraph Docker Container
-                Worker[Worker Running Untrusted Code]
+        subgraph APPVM2["AppVM 2: Worker Qube"]
+            subgraph DOCKER["Docker Container"]
+                Worker["Worker Running Untrusted Code"]
             end
         end
     end
 
-    Worker -.->|1. Container Escape| AppVM 2
-    AppVM 2 -->|2. Trapped by Xen Hypervisor| Dom0
+    Worker -.->|container escape| APPVM2
+    APPVM2 -->|trapped by Xen hypervisor| Dom0
 ```
 
 Even if malicious code manages to exploit a vulnerability and escape the Docker container, the attacker remains trapped inside the isolated VM boundary, protecting your host, database, and other components from being compromised.
