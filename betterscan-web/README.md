@@ -78,7 +78,7 @@ GitHub App env: `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY` (or
 
 ```bash
 # Clone the repository
-git clone https://github.com/marcinguy-dot/betterscan.git
+git clone https://github.com/betterscan-io/betterscan.git
 cd betterscan-web
 
 # Copy environment variables
@@ -279,5 +279,5 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues and questions:
-- GitHub Issues: https://github.com/marcinguy-dot/betterscan/issues
+- GitHub Issues: https://github.com/betterscan-io/betterscan/issues
 - Documentation: [DEPLOYMENT.md](./DEPLOYMENT.md)

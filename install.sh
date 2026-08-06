@@ -2,9 +2,9 @@
 # BetterScan CLI installer
 #
 # Usage:
-#   curl -fsSL https://github.com/marcinguy-dot/betterscan/raw/refs/heads/main/install.sh | sh
-#   curl -fsSL https://github.com/marcinguy-dot/betterscan/raw/refs/heads/main/install.sh | sh -s -- -b /usr/local/bin
-#   curl -fsSL https://github.com/marcinguy-dot/betterscan/raw/refs/heads/main/install.sh | sh -s -- -v v0.1.0
+#   curl -fsSL https://github.com/betterscan-io/betterscan/raw/refs/heads/main/install.sh | sh
+#   curl -fsSL https://github.com/betterscan-io/betterscan/raw/refs/heads/main/install.sh | sh -s -- -b /usr/local/bin
+#   curl -fsSL https://github.com/betterscan-io/betterscan/raw/refs/heads/main/install.sh | sh -s -- -v v0.1.0
 #
 # Options:
 #   -b DIR   Install directory (default: ~/.local/bin)
@@ -13,7 +13,7 @@
 
 set -e
 
-OWNER="${BETTERSCAN_INSTALL_OWNER:-marcinguy-dot}"
+OWNER="${BETTERSCAN_INSTALL_OWNER:-betterscan-io}"
 REPO="${BETTERSCAN_INSTALL_REPO:-betterscan}"
 HOST="${BETTERSCAN_INSTALL_HOST:-github.com}"
 BINARY="${BETTERSCAN_INSTALL_BINARY:-betterscan}"

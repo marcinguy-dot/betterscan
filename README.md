@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/marcinguy-dot/betterscan"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-marcinguy--dot%2Fbetterscan-1e1b4b?logo=github" /></a>
+  <a href="https://github.com/betterscan-io/betterscan"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-betterscan--io%2Fbetterscan-1e1b4b?logo=github" /></a>
   <img alt="License" src="https://img.shields.io/badge/license-see%20repo-22d3ee" />
   <img alt="Stack" src="https://img.shields.io/badge/stack-Go%20%7C%20OpenGrep%20%7C%20Trivy%20%7C%20Joern%20%7C%20CPG-8b5cf6" />
 </p>
@@ -63,8 +63,8 @@ Text comparison of the two UIs (no screenshots in-repo):
 but needs ongoing maintenance (npm audit churn, build, upgrades); the jQuery
 version is plainer but zero-build and will run for years untouched. The two are
 also available as single-frontend branches
-([`frontend-nextjs`](https://github.com/marcinguy-dot/betterscan/tree/frontend-nextjs),
-[`frontend-jquery`](https://github.com/marcinguy-dot/betterscan/tree/frontend-jquery))
+([`frontend-nextjs`](https://github.com/betterscan-io/betterscan/tree/frontend-nextjs),
+[`frontend-jquery`](https://github.com/betterscan-io/betterscan/tree/frontend-jquery))
 if you want to deploy only one.
 
 ## Security & Isolation: Qubes OS for Workers

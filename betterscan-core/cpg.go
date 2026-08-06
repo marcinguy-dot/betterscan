@@ -926,7 +926,7 @@ func httpGetWithRetry(url string) (*http.Response, error) {
 		if reqErr != nil {
 			return nil, reqErr
 		}
-		req.Header.Set("User-Agent", "betterscan/1.0.0 (https://github.com/marcinguy-dot/betterscan)")
+		req.Header.Set("User-Agent", "betterscan/1.0.0 (https://github.com/betterscan-io/betterscan)")
 
 		resp, err = client.Do(req)
 		if err == nil {
