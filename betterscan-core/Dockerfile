@@ -25,12 +25,6 @@ WORKDIR /root/
 # Copy the binary from builder
 COPY --from=builder /app/betterscan .
 
-# Install common security scanning tools
-RUN apk --no-cache add \
-    trivy \
-    bandit \
-    && rm -rf /var/cache/apk/*
-
 # Create directory for rules
 RUN mkdir -p /root/.betterscan/rules
 
