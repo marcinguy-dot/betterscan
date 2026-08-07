@@ -130,3 +130,9 @@ dmypy.json
 
 # gradle
 .gradle
+
+# Built CLI binaries (local)
+betterscan-cli/betterscan
+betterscan-core/betterscan
+betterscan-cli/betterscan_*
+betterscan-core/betterscan_*

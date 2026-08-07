@@ -21,6 +21,11 @@ import (
 	"time"
 )
 
+// version is injected at build time:
+//
+//	go build -ldflags "-X main.version=v0.1.0"
+var version = "dev"
+
 const (
 	aikidoRulesURL  = "https://github.com/AikidoSec/opengrep-rules/archive/refs/heads/main.tar.gz"
 	amplifyRulesURL = "https://github.com/amplify-security/opengrep-rules/archive/refs/heads/main.tar.gz"
@@ -131,9 +136,15 @@ func main() {
 		llmWorkers     = flag.Int("llm-workers", 4, "Concurrent LLM requests")
 		llmMaxIssues   = flag.Int("llm-max-issues", 100, "Max issues to enrich with LLM")
 		llmTimeoutSec  = flag.Int("llm-timeout", 30, "Timeout in seconds for each LLM call")
+		showVersion    = flag.Bool("version", false, "Print version and exit")
 	)
 
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	cleanCodeDir := filepath.Clean(*codeDir)
 	info, err := os.Stat(cleanCodeDir)

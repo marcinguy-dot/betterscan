@@ -58,6 +58,27 @@ curl -fsSL https://raw.githubusercontent.com/betterscan-io/betterscan/main/scrip
 Use **`-fsSL`** (not `-sSL`) so HTTP errors fail instead of piping a GitHub HTML 404 into `sh`.  
 If no GitHub release asset exists for your platform, the installer builds from source (requires **Go 1.22+** and **git**).
 
+### CLI binary releases (GitHub Actions)
+
+On every PR/push that touches the CLI, CI builds multi-platform archives and uploads them as the **betterscan-binaries** workflow artifact.
+
+To publish a GitHub Release (installable via `install.sh -v …`):
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+That triggers [`.github/workflows/release.yml`](.github/workflows/release.yml), which:
+
+1. Cross-compiles `betterscan` for Linux/macOS/Windows (amd64 + arm64)
+2. Packages archives named for `scripts/install.sh` (e.g. `betterscan_darwin_arm64.tar.gz`)
+3. Attaches `checksums.txt` / `SHA256SUMS`
+4. Creates the GitHub Release with auto-generated notes
+5. Pushes a multi-arch image to `ghcr.io/betterscan-io/betterscan/betterscan`
+
+Locally: `VERSION=v0.1.0 ./scripts/release-build.sh` writes the same assets under `dist/`.
+
 For CLI usage, see `betterscan-cli/README.md`. For the web stack, see `betterscan-web/README.md`.
 
 **Graph engines:** BetterScan runs **Joern** for mature, excellent default vulnerability queries, and **Fraunhofer CPG** primarily for **new custom rules** and **project-specific enforcement** on a multi-language code property graph (library / extensible analyses—aligned with Fraunhofer's platform framing and tools such as Codyze). Details: [betterscan-core/README.md § Graph engines](betterscan-core/README.md#graph-engines-joern-vs-fraunhofer-cpg).

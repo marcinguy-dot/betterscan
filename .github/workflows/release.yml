@@ -1,77 +1,133 @@
 name: Release
 
+# Publish multi-platform CLI binaries + GitHub Release when a version tag is pushed.
+# Also supports manual runs (artifacts only unless ref is a v* tag).
+#
+# Create a release:
+#   git tag v0.1.0
+#   git push origin v0.1.0
+#
+# Assets match scripts/install.sh naming:
+#   betterscan_linux_amd64.tar.gz, betterscan_darwin_arm64.tar.gz, ...
+#   betterscan_windows_amd64.zip, checksums.txt, SHA256SUMS
+
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
-  GO_VERSION: '1.23'
+  REGISTRY: ghcr.io
 
 jobs:
   build:
-    name: Build ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: linux-amd64
-            goos: linux
-            goarch: amd64
-          - os: ubuntu-latest
-            target: linux-arm64
-            goos: linux
-            goarch: arm64
-          - os: macos-latest
-            target: darwin-amd64
-            goos: darwin
-            goarch: amd64
-          - os: macos-latest
-            target: darwin-arm64
-            goos: darwin
-            goarch: arm64
-          - os: ubuntu-latest
-            target: windows-amd64
-            goos: windows
-            goarch: amd64
-
+    name: Build release binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version-file: betterscan-core/go.mod
+          cache-dependency-path: betterscan-core/go.mod
 
-      - name: Build betterscan
-        working-directory: betterscan-core
+      - name: Install zip
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq zip
+
+      - name: Resolve version
+        id: version
         run: |
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -o betterscan_${{ matrix.target }}${{ matrix.goos == 'windows' && '.exe' || '' }} .
-          chmod +x betterscan_${{ matrix.target }}${{ matrix.goos == 'windows' && '.exe' || '' }}
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF_NAME}"
+          else
+            VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo "dev-${GITHUB_SHA::7}")"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Building version ${VERSION}"
 
-      - name: Upload artifact
+      - name: Build multi-platform binaries
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          chmod +x scripts/release-build.sh
+          ./scripts/release-build.sh
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: betterscan_${{ matrix.target }}
-          path: betterscan-core/betterscan_${{ matrix.target }}${{ matrix.goos == 'windows' && '.exe' || '' }}
+          name: betterscan-release-${{ steps.version.outputs.version }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
 
-  build-docker:
-    name: Build Docker images
+      - name: List assets
+        run: ls -lh dist/ && cat dist/checksums.txt
+
+  release:
+    name: GitHub Release
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          name: betterscan-release-${{ github.ref_name }}
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: BetterScan ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/betterscan_*.tar.gz
+            dist/betterscan_*.zip
+            dist/checksums.txt
+            dist/SHA256SUMS
+          body: |
+            ## Install
+
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/betterscan-io/betterscan/main/scripts/install.sh | sh -s -- -v ${{ github.ref_name }}
+            ```
+
+            Or download a platform archive below and extract the `betterscan` binary onto your `PATH`.
+
+            ## Checksums
+
+            Verify downloads with `checksums.txt` / `SHA256SUMS` attached to this release.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    name: Publish container image
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        platform:
-          - linux/amd64
-          - linux/arm64
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up QEMU
@@ -83,7 +139,7 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -91,56 +147,20 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}/betterscan
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/betterscan
           tags: |
-            type=ref,event=tag
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+            type=sha
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v6
         with:
           context: betterscan-core
-          platforms: ${{ matrix.platform }}
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    needs: [build, build-docker]
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Create checksums
-        run: |
-          cd artifacts
-          for dir in */; do
-            cd "$dir"
-            shasum -a 256 * > ../checksums.txt
-            cd ..
-          done
-          cat checksums.txt > checksums.txt
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            artifacts/betterscan_*/betterscan_*
-            artifacts/checksums.txt
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
