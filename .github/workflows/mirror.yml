@@ -1,0 +1,33 @@
+name: Mirror to Codeberg
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mirror:
+    name: Mirror to Codeberg
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Codeberg
+        env:
+          CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
+        run: |
+          if [ -z "$CODEBERG_TOKEN" ]; then
+            echo "::error::CODEBERG_TOKEN secret not set - add it at https://github.com/betterscan-io/betterscan/settings/secrets/actions"
+            exit 1
+          fi
+          git remote add codeberg "https://oauth2:${CODEBERG_TOKEN}@codeberg.org/betterscan-io/betterscan.git" 2>/dev/null || \
+            git remote set-url codeberg "https://oauth2:${CODEBERG_TOKEN}@codeberg.org/betterscan-io/betterscan.git"
+          # --mirror pushes all refs (branches, tags, notes). Use --force implicitly.
+          git push --mirror codeberg
