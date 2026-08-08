@@ -29,5 +29,6 @@ jobs:
           fi
           git remote add codeberg "https://oauth2:${CODEBERG_TOKEN}@codeberg.org/betterscan-io/betterscan.git" 2>/dev/null || \
             git remote set-url codeberg "https://oauth2:${CODEBERG_TOKEN}@codeberg.org/betterscan-io/betterscan.git"
-          # --mirror pushes all refs (branches, tags, notes). Use --force implicitly.
-          git push --mirror codeberg
+          # Push all branches and tags (avoid --mirror which tries to push GitHub pull refs)
+          git push codeberg --all --force
+          git push codeberg --tags --force
