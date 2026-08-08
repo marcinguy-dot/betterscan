@@ -9,10 +9,17 @@
 </p>
 
 <p align="center">
+  <a href="https://betterscan.io">https://betterscan.io</a>
+</p>
+
+<p align="center">
+  <a href="https://betterscan.io"><img alt="Website" src="https://img.shields.io/badge/website-betterscan.io-22d3ee?logo=googlechrome&logoColor=white" /></a>
   <a href="https://github.com/betterscan-io/betterscan"><img alt="GitHub" src="https://img.shields.io/badge/GitHub-betterscan--io%2Fbetterscan-1e1b4b?logo=github" /></a>
   <img alt="License" src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-22d3ee" />
   <img alt="Stack" src="https://img.shields.io/badge/stack-Go%20%7C%20OpenGrep%20%7C%20Trivy%20%7C%20Joern%20%7C%20CPG-8b5cf6" />
 </p>
+
+**Website:** [betterscan.io](https://betterscan.io)
 
 **Lineage:** BetterScan continues the **Contender** project line shown at **Black Hat MEA 2025** in **Saudi Arabia** (Riyadh). Same mission—serious multi-engine code security—rebuilt for graph-aware analysis (Joern / Fraunhofer CPG), a modern Go runner, and a full self-hosted web platform. (Earlier names in this repo: Checkmate, Lattice.)
 

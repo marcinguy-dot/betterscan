@@ -3,6 +3,8 @@
 Go-based scanner runner with sequential/parallel execution, normalized findings,
 and optional LLM enrichment for JSON/SARIF/HTML outputs.
 
+**Website:** [https://betterscan.io](https://betterscan.io)
+
 BetterScan continues the **Contender** project line presented at
 **Black Hat MEA 2025** in Saudi Arabia—rebuilt around multi-engine orchestration and
 code property graphs.

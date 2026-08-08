@@ -2,6 +2,8 @@
 
 A modern web interface for the BetterScan code scanning platform with SSO authentication, dashboard, and vulnerability management.
 
+**Website:** [https://betterscan.io](https://betterscan.io)
+
 BetterScan continues the **Contender** project line shown at **Black Hat MEA 2025**
 (Saudi Arabia) as a self-hosted, multi-engine scanning platform.
 
@@ -279,5 +281,6 @@ MIT License - see LICENSE file for details
 ## Support
 
 For issues and questions:
+- Website: https://betterscan.io
 - GitHub Issues: https://github.com/betterscan-io/betterscan/issues
 - Documentation: [DEPLOYMENT.md](./DEPLOYMENT.md)

@@ -1,6 +1,7 @@
 # BetterScan brand
 
 **Product name:** BetterScan  
+**Website:** [https://betterscan.io](https://betterscan.io)  
 **Tagline (optional):** Deep code security · graph-aware scanning  
 
 ## Assets
@@ -25,8 +26,9 @@
 ## GitHub branding checklist
 
 1. **Org avatar:** Settings → Organization profile → upload `logo.png`
-2. **Repo social preview:** Repo → Settings → General → Social preview → upload `.github/social-preview.png`
-3. **README:** uses `logo.png` at the top of the root `README.md`
+2. **Repo homepage URL:** Settings → General → Website → `https://betterscan.io` (also set via `gh repo edit --homepage "https://betterscan.io"`)
+3. **Repo social preview:** Repo → Settings → General → Social preview → upload `.github/social-preview.png`
+4. **README:** uses `logo.png` at the top of the root `README.md` and links to betterscan.io
 
 ## Paths after rename
 
