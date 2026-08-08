@@ -24,11 +24,19 @@ jobs:
           CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
         run: |
           if [ -z "$CODEBERG_TOKEN" ]; then
-            echo "::error::CODEBERG_TOKEN secret not set - add it at https://github.com/betterscan-io/betterscan/settings/secrets/actions"
+            echo "::error::CODEBERG_TOKEN secret not set"
             exit 1
           fi
+          echo "Token length: ${#CODEBERG_TOKEN}"
+          # Try both URL formats; Forgejo accepts token as password with any username
           git remote add codeberg "https://oauth2:${CODEBERG_TOKEN}@codeberg.org/betterscan-io/betterscan.git" 2>/dev/null || \
             git remote set-url codeberg "https://oauth2:${CODEBERG_TOKEN}@codeberg.org/betterscan-io/betterscan.git"
-          # Push all branches and tags (avoid --mirror which tries to push GitHub pull refs)
-          git push codeberg --all --force
+          git config --get remote.codeberg.url | sed 's/:[^@]*@/:***@/g' || true
+          echo "Attempting push --all..."
+          git push codeberg --all --force 2>&1 || {
+            echo "push --all failed (exit $?), trying verbose..."
+            GIT_CURL_VERBOSE=1 git push codeberg --all --force 2>&1 | sed 's/\(oauth2:\)[^@]*@/\1***@/g' | head -n 150
+            exit 1
+          }
+          echo "Pushing tags..."
           git push codeberg --tags --force
